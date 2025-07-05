@@ -10,5 +10,6 @@ export async function google_sign_in() {
 
 export async function google_sign_out() {
     await signOut(auth);
+    // also clear cookie server side
     console.log("Signed out")
 }
