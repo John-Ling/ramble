@@ -6,6 +6,8 @@ export async function google_sign_in() {
     const credential: UserCredential = await signInWithPopup(auth, provider);
     const user: User = credential.user;
     console.log(user.uid);
+
+    return credential;
 }
 
 export async function google_sign_out() {
