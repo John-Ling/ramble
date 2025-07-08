@@ -6,14 +6,16 @@ import SettingsMenu from "../settings-menu/settings_menu";
 
 import { google_sign_out } from "@/lib/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
-import { write_entry } from "@/lib/firebase/db";
+import { get_entry, write_entry } from "@/lib/firebase/db";
 
 
 export default function JournalPage() {
+  const {authenticated, user, loading, check_auth_client} = useAuth();  
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const currentDate: string = new Date().toLocaleDateString();
+  const [loadingData, setLoadingData] = useState<boolean>(true);
 
   // format date into dbDate
   function format_date(date: string) {
@@ -31,8 +33,25 @@ export default function JournalPage() {
     return (() => {
       clearInterval(interval);
     })
-  })
-  const {authenticated, user, loading, check_auth_client} = useAuth();  
+  });
+
+  useEffect(() => {
+    // load data
+    if (!!user) {
+      console.log("Reading");
+      get_entry(user, dbDate).then((entry: JournalEntry | null) => {
+        console.log("Got data back");
+        if (!!entry) {
+          console.log(entry.content);
+          setContent(entry.content);
+          setSaved(entry.content);
+        }
+        setLoadingData(false);
+      });  
+    }
+  }, [user]);
+
+  
   check_auth_client();
 
   // probably add provider component called protected route or something
@@ -70,7 +89,11 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <h1 className="p-2">{currentDate}</h1>
-          <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" placeholder="What's on your mind?"  className="h-[85vh]"/>
+          <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
+                    disabled={loadingData} 
+                    placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
+                    className="h-[85vh]" 
+                    value={content}/>
         </div>    
       </div> 
     </>
