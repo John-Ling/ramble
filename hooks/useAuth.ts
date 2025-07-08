@@ -12,7 +12,6 @@ export function useAuth() {
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        console.log("Running event");
         const unsubscribe = onAuthStateChanged(auth, user => {
             if (user) {
                 console.log("User is logged in");
@@ -28,8 +27,6 @@ export function useAuth() {
     function check_auth_client() {
         // client side check for authentication
         useEffect(() => {
-            console.log(loading);
-            console.log(authenticated);
             if (!loading && !authenticated ) {
                 router.push("/login");
             }

@@ -112,11 +112,27 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  textarea {
+    background-color: var(--card) !important;
+    opacity: 100 !important;
+  }
+
   body {
     @apply bg-background text-foreground;
+    background-size: 80px 80px;
+    background-image: 
+        linear-gradient(to right, #282828 1px, transparent 1px),
+        linear-gradient(to bottom, #282828 1px, transparent 1px);
   }
+}
+
+@layer utilities {
+
 }

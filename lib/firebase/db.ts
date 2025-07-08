@@ -28,5 +28,4 @@ export async function get_entry(user: User, dbDate: string) {
 export async function get_n_entries(user: User, dbDate: string, n: number) {
     // returns the entry at dbDate along with n entries before and after it
     const entries: JournalEntry[] = [];
-
 }
