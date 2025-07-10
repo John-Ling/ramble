@@ -51,5 +51,8 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
         entries.push(doc.data() as JournalEntry);
     }))
 
+
+    console.log('Entries');
+    console.log(entries);
     return entries;
 }

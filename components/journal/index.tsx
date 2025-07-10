@@ -3,7 +3,7 @@
 import { Textarea } from "../ui/textarea";
 import { useEffect, useState } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
-import EntriesPage from "./entries-page/entries_page";
+import EntriesPage from "./entries-page/entries_menu";
 
 import { google_sign_out } from "@/lib/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +19,7 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const currentDate: string = new Date().toLocaleDateString();
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
 
   // format date into dbDate
   function format_date(date: string) {
@@ -28,8 +28,6 @@ export default function JournalPage() {
   }
 
   const dbDate: string = format_date(currentDate);
-
-  
 
   useEffect(() => {
     // attach event listener for autosave
@@ -63,18 +61,17 @@ export default function JournalPage() {
   if (loading) return <h1>Loading</h1>
   if (!authenticated) return null;
 
-  async function save() {
+  function save() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     if (!!user) {
-      await write_entry(user, dbDate, entry);
+      write_entry(user, dbDate, entry);
     }
 
     setPendingSave(true);
     return;
   }
-  
 
   function autosave() {
     if (content !== saved && pendingSave) {
@@ -90,7 +87,7 @@ export default function JournalPage() {
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
         {/* entry selector  */}
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} n={2} /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} n={2} onClose={() => setEntriesVisible(false)} /> : null}
         {/* menubar */}
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
