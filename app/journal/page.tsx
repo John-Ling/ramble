@@ -1,4 +1,4 @@
-import JournalPage from "@/components/journal/journal_page"
+import JournalPage from "@/components/journal"
 
 export default function Page(){
   return (

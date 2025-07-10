@@ -1,5 +1,5 @@
 import { User } from "firebase/auth";
-import { setDoc, doc, getDoc } from "firebase/firestore";
+import { setDoc, doc, getDoc, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "./config";
 
 
@@ -28,4 +28,28 @@ export async function get_entry(user: User, dbDate: string) {
 export async function get_n_entries(user: User, dbDate: string, n: number) {
     // returns the entry at dbDate along with n entries before and after it
     const entries: JournalEntry[] = [];
+    const ref = collection(db, "users", user.uid, "entries");
+
+    // const beforeQuery = query("created", '<', dbDate).orderBy("created", "desc").limit(n)
+    const beforeQuery = query(ref, where("created", '<', dbDate), orderBy("created", "asc"), limit(n));
+    ((await getDocs(beforeQuery)).forEach((doc) => {
+        console.log(doc.data());
+        entries.push(doc.data() as JournalEntry);
+    }));
+
+    // get middle entry
+    const middleEntry: JournalEntry | null = await get_entry(user, dbDate);
+    if (!middleEntry) {
+        return null;
+    }
+    entries.push(middleEntry);
+
+
+    const afterQuery = query(ref, where("created", '>', dbDate), orderBy("created", "desc"), limit(n));
+
+    ((await getDocs(afterQuery)).forEach((doc) => {
+        entries.push(doc.data() as JournalEntry);
+    }))
+
+    return entries;
 }

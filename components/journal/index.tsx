@@ -3,10 +3,13 @@
 import { Textarea } from "../ui/textarea";
 import { useEffect, useState } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
+import EntriesPage from "./entries-page/entries_page";
 
 import { google_sign_out } from "@/lib/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { get_entry, write_entry } from "@/lib/firebase/db";
+
+import { Button } from "../ui/button";
 
 
 export default function JournalPage() {
@@ -16,6 +19,7 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const currentDate: string = new Date().toLocaleDateString();
   const [loadingData, setLoadingData] = useState<boolean>(true);
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
 
   // format date into dbDate
   function format_date(date: string) {
@@ -25,7 +29,7 @@ export default function JournalPage() {
 
   const dbDate: string = format_date(currentDate);
 
-  // const [setEntriesVisible] = useState<boolean>(false);
+  
 
   useEffect(() => {
     // attach event listener for autosave
@@ -58,18 +62,24 @@ export default function JournalPage() {
   // do checks there instead of here
   if (loading) return <h1>Loading</h1>
   if (!authenticated) return null;
+
+  async function save() {
+    setSaved(content);
+    setPendingSave(false);
+    const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
+    if (!!user) {
+      await write_entry(user, dbDate, entry);
+    }
+
+    setPendingSave(true);
+    return;
+  }
   
 
   function autosave() {
     if (content !== saved && pendingSave) {
       // run save code
-      setSaved(content);
-      setPendingSave(false);
-      const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
-      if (!!user) {
-        write_entry(user, dbDate, entry);
-      }
-      
+      save();
       return;
     } 
     setPendingSave(true);
@@ -79,21 +89,27 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
+        {/* entry selector  */}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} n={2} /> : null}
         {/* menubar */}
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
             <h1 className="font-bold text-2xl">Ramble</h1>
-            <SettingsMenu onLogout={google_sign_out}/>
+            <SettingsMenu onEntries={() => setEntriesVisible(true)} onLogout={google_sign_out}/>
           </div>
         </div>
         {/* journal form */}
         <div className="w-full lg:w-3/5">
-          <h1 className="p-2">{currentDate}</h1>
+          <div className="flex justify-between pb-2">
+            <h1 className="p-2">{currentDate}</h1>
+            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
+          </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={loadingData} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
                     className="h-[85vh]" 
                     value={content}/>
+          
         </div>    
       </div> 
     </>
