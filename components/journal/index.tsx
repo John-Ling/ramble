@@ -61,22 +61,22 @@ export default function JournalPage() {
   if (loading) return <h1>Loading</h1>
   if (!authenticated) return null;
 
-  function save() {
+  async  function save() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     if (!!user) {
-      write_entry(user, dbDate, entry);
+      await write_entry(user, dbDate, entry);
     }
 
     setPendingSave(true);
     return;
   }
 
-  function autosave() {
+  async function autosave() {
     if (content !== saved && pendingSave) {
       // run save code
-      save();
+      await save();
       return;
     } 
     setPendingSave(true);
@@ -92,7 +92,7 @@ export default function JournalPage() {
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
             <h1 className="font-bold text-2xl">Ramble</h1>
-            <SettingsMenu onEntries={() => setEntriesVisible(true)} onLogout={google_sign_out}/>
+            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={google_sign_out}/>
           </div>
         </div>
         {/* journal form */}

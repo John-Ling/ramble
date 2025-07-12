@@ -39,10 +39,11 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
 
     // get middle entry
     const middleEntry: JournalEntry | null = await get_entry(user, dbDate);
-    if (!middleEntry) {
-        return null;
+    if (!middleEntry) {o
+        entries.push({created: dbDate, content: "", favourite: false, tags: []} as JournalEntry);
+    } else {
+        entries.push(middleEntry);
     }
-    entries.push(middleEntry);
 
 
     const afterQuery = query(ref, where("created", '>', dbDate), orderBy("created", "desc"), limit(n));

@@ -13,13 +13,14 @@ interface SettingsMenuProps {
   onEntries?: () => void;
   onPrefs?: () => void;
   onLogout?: () => void;
+  disabled: boolean;
 }
 
-export default function SettingsMenu({onEntries = undefined, onPrefs = undefined, onLogout = undefined}: SettingsMenuProps) {
+export default function SettingsMenu({onEntries = undefined, onPrefs = undefined, onLogout = undefined, disabled}: SettingsMenuProps) {
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="size-8">
+        <DropdownMenuTrigger className="size-8" disabled={disabled} aria-disabled={disabled}>
           <Settings />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
