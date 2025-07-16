@@ -25,7 +25,7 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   if (!fetched) return null;
   const entries = fetched.entries;
   // if (!entries)  return;
-  console.log(entries);
+  console.log("Active index ", activeIndex);
 
   // if (entries === undefined) return null;
   
@@ -46,10 +46,12 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
         case "ArrowUp":
           event.preventDefault();
           setActiveIndex(prev => prev - 1);
+          check_bounds(activeIndex - 1);
           break;
         case "ArrowDown":
           event.preventDefault();
           setActiveIndex(prev => prev + 1);
+          check_bounds(activeIndex + 1);
           break;
         case "Escape":
           event.preventDefault();
@@ -77,14 +79,33 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     for (let i = Math.max(startIndex - 2, 0); i < Math.min(startIndex + 2, entries.length); i++) {
       buffer.push(entries[i]);
     }
-  console.log("Buffer");
-  console.log(buffer);
-  setDisplayEntries([...buffer]);
+
+    console.log(startIndex);
+    setDisplayEntries([...buffer]);
   }, [entries]);
   
   function format_date(dbDate: string) {
     const split: string[] = dbDate.split('-');
     return `${split[2]}/${split[1]}/${split[0]}`
+  }
+
+  function check_bounds(index: number) {
+    if (!entries) {
+      return;
+    }
+
+    // check if the index has is 1 step away from the boudary
+    // if so change 
+
+    // if the maximum or minimum has been reached however simply stop the user from progressing
+    const upper = Math.min(activeIndex + 2, entries.length);
+    const lower = Math.max(activeIndex - 2, 0 );
+
+    if (index + 1 >= displayEntries.length - 1) {
+      console.log('Reached end');
+    } else if (index - 1 <= 0) {
+      console.log("Reached start");
+    }
   }
 
   return (
@@ -167,7 +188,6 @@ function useEntries(user: User | null, dbDate: string, n: number) {
     return null;
   }
 
-  console.log("pulling data");
   const {data, error, isLoading} = useSWR([user, dbDate, n], ([user, dbDate, n]) => get_n_entries(user, dbDate, n), {
     revalidateOnFocus: false,
     dedupingInterval: 60000 // 1 minute 
