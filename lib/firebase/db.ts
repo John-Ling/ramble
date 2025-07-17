@@ -34,25 +34,13 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
 
     const beforeQuery = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(n));
     ((await getDocs(beforeQuery)).forEach((doc) => {
-        console.log(doc.data());
         entries.push(doc.data() as JournalEntry);
     }));
 
     entries.reverse();
     
-
-    // get middle entry
-
-    // put middle entry
-
-    // const middleEntry: JournalEntry | null = await get_entry(user, dbDate);
-    // if (!middleEntry) {
-    //     console
+    // put add middle (current) entry
     entries.push({created: dbDate, content: "sample content", favourite: false, tags: []} as JournalEntry);
-    // } else {
-    //     entries.push(middleEntry);
-    // }
-
 
     const afterQuery = query(ref, where("created", '>', dbDate), orderBy("created", "asc"), limit(n));
 

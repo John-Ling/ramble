@@ -19,15 +19,11 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   const [displayEntries, setDisplayEntries] = useState<JournalEntry[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(2);
   const activeEntry = useRef<JournalEntry | null>(null);
-  
   const fetched = useEntries(user, dbDate, 5);
+  
      
   if (!fetched) return null;
   const entries = fetched.entries;
-  // if (!entries)  return;
-  console.log("Active index ", activeIndex);
-
-  // if (entries === undefined) return null;
   
   // form display window by taking n indices up and below active index
   
@@ -38,6 +34,8 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // if active index is a 1 away from the boundary make a call to get above 
   // same logic applies for below
+  // 
+
   // 
 
   useEffect(() => {
@@ -71,17 +69,17 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // render active entry and adjacent entries
   useEffect(() => {
-    const buffer: JournalEntry[] = [];
     if (!entries) {
       return;
     }
+    const buffer: JournalEntry[] = [];
     const startIndex = entries.map(entry => entry.created).indexOf(dbDate);
     for (let i = Math.max(startIndex - 2, 0); i < Math.min(startIndex + 2, entries.length); i++) {
       buffer.push(entries[i]);
     }
 
-    console.log(startIndex);
     setDisplayEntries([...buffer]);
+    activeEntry.current = entries[activeIndex];
   }, [entries]);
   
   function format_date(dbDate: string) {
@@ -90,19 +88,24 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   }
 
   function check_bounds(index: number) {
-    if (!entries) {
-      return;
-    }
+    if (!entries) return;
+    if (index < 0 || index >= displayEntries.length) return;
 
-    // check if the index has is 1 step away from the boudary
+    // check if the index has is 1 step away from the boundary
     // if so change 
 
     // if the maximum or minimum has been reached however simply stop the user from progressing
     const upper = Math.min(activeIndex + 2, entries.length);
     const lower = Math.max(activeIndex - 2, 0 );
 
+    // change dbdate
+    const newDate: string= displayEntries[index].created;
+
+    console.log(newDate);
     if (index + 1 >= displayEntries.length - 1) {
       console.log('Reached end');
+      // update active entry which means data will be pulled next render
+      
     } else if (index - 1 <= 0) {
       console.log("Reached start");
     }
