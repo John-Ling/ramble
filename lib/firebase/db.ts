@@ -47,5 +47,7 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
     ((await getDocs(afterQuery)).forEach((doc) => {
         entries.push(doc.data() as JournalEntry);
     }))
+
+    console.log(entries);
     return entries;
 }

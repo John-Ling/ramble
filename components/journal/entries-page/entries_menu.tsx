@@ -17,8 +17,23 @@ interface EntriesPageProps {
 export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [displayEntries, setDisplayEntries] = useState<JournalEntry[]>([]);
+
+  // index for the viewable entries
   const [activeIndex, setActiveIndex] = useState<number>(2);
+
+  // index for all the currently pulled entries 
+  // starts in the middle
+  const entriesIndex = useRef<number>(5); // change to n later
+
   const activeEntry = useRef<JournalEntry | null>(null);
+
+  // let fetched = undefined;
+  // if (activeEntry.current === null) {
+  //   fetched = useEntries(user, dbDate, 5);
+  // } else {
+  //   fetched = useEntries(user, activeEntry.current.created, 5);
+  // }
+
   const fetched = useEntries(user, dbDate, 5);
   
      
@@ -32,24 +47,26 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // keep track of activeIndex if it exceeds 4 or falls below 0 replace
 
-  // if active index is a 1 away from the boundary make a call to get above 
-  // same logic applies for below
-  // 
-
-  // 
+  // if the active index exceeds or goes below the window.
+  // take the next element or previous element (depends if going above or below)
+  // pop the back and push it or vice versa
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
-          setActiveIndex(prev => prev - 1);
+          // setActiveIndex(prev => prev - 1);
+          entriesIndex.current -= 1;
           check_bounds(activeIndex - 1);
+          
           break;
         case "ArrowDown":
           event.preventDefault();
-          setActiveIndex(prev => prev + 1);
+          // setActiveIndex(prev => prev + 1);
+          entriesIndex.current += 1;
           check_bounds(activeIndex + 1);
+          
           break;
         case "Escape":
           event.preventDefault();
@@ -74,7 +91,7 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     }
     const buffer: JournalEntry[] = [];
     const startIndex = entries.map(entry => entry.created).indexOf(dbDate);
-    for (let i = Math.max(startIndex - 2, 0); i < Math.min(startIndex + 2, entries.length); i++) {
+    for (let i = Math.max(startIndex - 2, 0); i < Math.min(startIndex + 3, entries.length); i++) {
       buffer.push(entries[i]);
     }
 
@@ -88,27 +105,93 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   }
 
   function check_bounds(index: number) {
-    if (!entries) return;
-    if (index < 0 || index >= displayEntries.length) return;
+    // function to adjust the active index
+    // checks if index exceeds bounds of view
+    // if so it move to the "next page" of the view
+    // if the index exceeds bounds of entries
+    // makes a call to the API to pull more data
 
-    // check if the index has is 1 step away from the boundary
-    // if so change 
+    if (!entries) return;
+
+    if (entriesIndex.current < 0 || entriesIndex.current >= entries.length) {
+      console.log("Entries index reached bounds need to pull more data")
+      
+      if (entriesIndex.current < 0 ) {
+        entriesIndex.current += 1; 
+      } else {
+        entriesIndex.current -= 1;
+      }
+
+      return;
+    }
+
+    
+    console.log("Active index ", activeIndex);
+    console.log("Index ", index);
+    console.log("Entries index", entriesIndex.current);
+
+    // if index goes below bounds of view
+    if (index < 0) {
+      console.log("Gone below view")
+      // pop at front and push to back
+
+      // get back element 
+      let backEntry: JournalEntry | undefined = undefined;
+
+      // if (activeIndex >= 0) {
+      backEntry = entries[entriesIndex.current];
+      // }
+
+      if (backEntry === undefined) {
+        return;
+      }
+
+      console.log("Back entry");
+      console.log(backEntry);
+
+      // pop front element
+      setDisplayEntries(prev => prev.filter((_, index) => index !== prev.length - 1));
+      setDisplayEntries(prev => [backEntry, ...prev])
+      return;
+    } else if (index >= displayEntries.length) { // index exceeds bounds of view
+      console.log("exceeded view")
+      // push at front and pop at back
+      let frontEntry: JournalEntry | undefined = undefined;
+      // if (activeIndex >= 0) {
+        frontEntry = entries[entriesIndex.current];
+      // }
+
+      if (frontEntry === undefined) {
+        return;
+      }
+
+      console.log("Front entry")
+      console.log(frontEntry);
+      // pop back element
+      setDisplayEntries(prev => prev.filter((_, index) => index !== 0));
+      setDisplayEntries(prev => [...prev, frontEntry])
+      return;
+    }
 
     // if the maximum or minimum has been reached however simply stop the user from progressing
-    const upper = Math.min(activeIndex + 2, entries.length);
-    const lower = Math.max(activeIndex - 2, 0 );
+    // const upper = Math.min(activeIndex + 2, entries.length);
+    // const lower = Math.max(activeIndex - 2, 0 );
 
     // change dbdate
     const newDate: string= displayEntries[index].created;
 
     console.log(newDate);
-    if (index + 1 >= displayEntries.length - 1) {
+    activeEntry.current = displayEntries[index];
+    if (index >= displayEntries.length - 1) {
       console.log('Reached end');
       // update active entry which means data will be pulled next render
-      
-    } else if (index - 1 <= 0) {
+
+      // 
+    } else if (index - 2 <= 0) {
       console.log("Reached start");
     }
+
+    setActiveIndex(index);
   }
 
   return (

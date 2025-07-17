@@ -19,7 +19,7 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const currentDate: string = new Date().toLocaleDateString();
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
 
   // format date into dbDate
   function format_date(date: string) {
