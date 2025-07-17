@@ -1,7 +1,7 @@
 "use client";
-import { get_n_entries } from "@/lib/firebase/db";
+import { get_n_entries, get_n_after, get_n_before } from "@/lib/firebase/db";
 import { User } from "firebase/auth";
-import { useEffect, useRef, useState, useMemo } from "react"
+import { useEffect, useRef, useState } from "react"
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
@@ -16,20 +16,23 @@ interface EntriesPageProps {
 
 export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps) {
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchingData, setFetching] = useState<boolean>(false);
   const [displayEntries, setDisplayEntries] = useState<JournalEntry[]>([]);
 
   // index for the viewable entries
   const [activeIndex, setActiveIndex] = useState<number>(2);
 
+  const countBefore = useRef<number>(5);
+  const countAfter = useRef<number>(5);
+
   // index for all the currently pulled entries 
   // starts in the middle
   const entriesIndex = useRef<number>(5); // change to n later
   const activeEntry = useRef<JournalEntry | null>(null);
-  const fetched = useEntries(user, dbDate, 5);
+  const fetched = useEntries(user, dbDate, 10);
   
      
   if (!fetched) return null;
-  // if (!fetched.entries) return null;
   const entries = fetched.entries;
 
   // set trigger bounds for entires
@@ -42,13 +45,11 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
-          // setActiveIndex(prev => prev - 1);
           entriesIndex.current -= 1;
           check_bounds(activeIndex - 1);
           break;
         case "ArrowDown":
           event.preventDefault();
-          // setActiveIndex(prev => prev + 1);
           entriesIndex.current += 1;
           check_bounds(activeIndex + 1);
           break;
@@ -103,6 +104,9 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
     if (entriesIndex.current <= bottomBound || entriesIndex.current >= topBound) {
       console.log("Need to pull data ");
+
+      /// if the bounds are exceeded we pull data
+      /// then add it to our entries and increase the bounds respectively
     }
 
     // console.log("Active index ", activeIndex);
@@ -196,10 +200,21 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   )
 }
 
-function useEntries(user: User | null, dbDate: string, n: number) {
+function useEntries(user: User | null, dbDate: string, countBefore: number, countAfter: number) {
   if (!user) {
     console.log("null user")
     return null;
+  }
+
+  async function get_entries() {
+    if (!user) {
+      return null;
+    }
+
+    const before: JournalEntry[] = await get_n_before(user, dbDate, countBefore);
+    const after: JournalEntry[] = await get_n_after(user, dbDate, countAfter);
+
+    
   }
 
   const {data, error, isLoading} = useSWR([user, dbDate, n], ([user, dbDate, n]) => get_n_entries(user, dbDate, n), {

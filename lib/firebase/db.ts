@@ -30,7 +30,6 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
     const entries: JournalEntry[] = [];
     const ref = collection(db, "users", user.uid, "entries");
     console.log("Making DB call for ", dbDate);
-    // const beforeQuery = query("created", '<', dbDate).orderBy("created", "desc").limit(n)
 
     const beforeQuery = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(n));
     ((await getDocs(beforeQuery)).forEach((doc) => {
@@ -48,6 +47,31 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
         entries.push(doc.data() as JournalEntry);
     }))
 
-    console.log(entries);
+    return entries;
+}
+
+
+export async function get_n_before(user: User, dbDate: string, n: number) {
+    const entries: JournalEntry[] = [];
+    const ref = collection(db, "users", user.uid, "entries");
+
+    const beforeQuery = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(n));
+    ((await getDocs(beforeQuery)).forEach((doc) => {
+        entries.push(doc.data() as JournalEntry);
+    }));
+
+    entries.reverse();
+    return entries;
+}
+
+export async function get_n_after(user: User, dbDate: string, n: number) {
+    const entries: JournalEntry[] = [];
+    const ref = collection(db, "users", user.uid, "entries");
+    const afterQuery = query(ref, where("created", '>', dbDate), orderBy("created", "asc"), limit(n));
+
+    ((await getDocs(afterQuery)).forEach((doc) => {
+        entries.push(doc.data() as JournalEntry);
+    }))
+
     return entries;
 }
