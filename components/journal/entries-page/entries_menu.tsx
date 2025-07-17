@@ -24,33 +24,19 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   // index for all the currently pulled entries 
   // starts in the middle
   const entriesIndex = useRef<number>(5); // change to n later
-
   const activeEntry = useRef<JournalEntry | null>(null);
-
-  // let fetched = undefined;
-  // if (activeEntry.current === null) {
-  //   fetched = useEntries(user, dbDate, 5);
-  // } else {
-  //   fetched = useEntries(user, activeEntry.current.created, 5);
-  // }
-
   const fetched = useEntries(user, dbDate, 5);
   
      
   if (!fetched) return null;
+  // if (!fetched.entries) return null;
   const entries = fetched.entries;
+
+  // set trigger bounds for entires
+  // set 5 to n
+  const bottomBound: number = Math.max(5 - 3, 0);
+  const topBound: number =  !!entries ?  Math.min(entries.length - 3, entries.length - 1) : 5 * 2 - 1; // change 5 to n  
   
-  // form display window by taking n indices up and below active index
-  
-
-  // display only 5 at a time 
-
-  // keep track of activeIndex if it exceeds 4 or falls below 0 replace
-
-  // if the active index exceeds or goes below the window.
-  // take the next element or previous element (depends if going above or below)
-  // pop the back and push it or vice versa
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
@@ -59,14 +45,12 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
           // setActiveIndex(prev => prev - 1);
           entriesIndex.current -= 1;
           check_bounds(activeIndex - 1);
-          
           break;
         case "ArrowDown":
           event.preventDefault();
           // setActiveIndex(prev => prev + 1);
           entriesIndex.current += 1;
           check_bounds(activeIndex + 1);
-          
           break;
         case "Escape":
           event.preventDefault();
@@ -104,6 +88,8 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     return `${split[2]}/${split[1]}/${split[0]}`
   }
 
+
+  // don't look here digusting code ewwwww
   function check_bounds(index: number) {
     // function to adjust the active index
     // checks if index exceeds bounds of view
@@ -113,22 +99,15 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
     if (!entries) return;
 
-    if (entriesIndex.current < 0 || entriesIndex.current >= entries.length) {
-      console.log("Entries index reached bounds need to pull more data")
-      
-      if (entriesIndex.current < 0 ) {
-        entriesIndex.current += 1; 
-      } else {
-        entriesIndex.current -= 1;
-      }
+    if (entry_index_out_of_bounds(entries.length)) return;
 
-      return;
+    if (entriesIndex.current <= bottomBound || entriesIndex.current >= topBound) {
+      console.log("Need to pull data ");
     }
 
-    
-    console.log("Active index ", activeIndex);
-    console.log("Index ", index);
-    console.log("Entries index", entriesIndex.current);
+    // console.log("Active index ", activeIndex);
+    // console.log("Index ", index);
+    // console.log("Entries index", entriesIndex.current);
 
     // if index goes below bounds of view
     if (index < 0) {
@@ -137,10 +116,7 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
       // get back element 
       let backEntry: JournalEntry | undefined = undefined;
-
-      // if (activeIndex >= 0) {
       backEntry = entries[entriesIndex.current];
-      // }
 
       if (backEntry === undefined) {
         return;
@@ -157,9 +133,7 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       console.log("exceeded view")
       // push at front and pop at back
       let frontEntry: JournalEntry | undefined = undefined;
-      // if (activeIndex >= 0) {
-        frontEntry = entries[entriesIndex.current];
-      // }
+      frontEntry = entries[entriesIndex.current];
 
       if (frontEntry === undefined) {
         return;
@@ -173,26 +147,30 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       return;
     }
 
-    // if the maximum or minimum has been reached however simply stop the user from progressing
-    // const upper = Math.min(activeIndex + 2, entries.length);
-    // const lower = Math.max(activeIndex - 2, 0 );
-
     // change dbdate
     const newDate: string= displayEntries[index].created;
-
     console.log(newDate);
-    activeEntry.current = displayEntries[index];
-    if (index >= displayEntries.length - 1) {
-      console.log('Reached end');
-      // update active entry which means data will be pulled next render
-
-      // 
-    } else if (index - 2 <= 0) {
-      console.log("Reached start");
-    }
 
     setActiveIndex(index);
   }
+
+  function entry_index_out_of_bounds(upperLimit: number) {
+    if (entriesIndex.current < 0 || entriesIndex.current >= upperLimit) {
+      console.log("Entries index reached bounds")
+      
+      if (entriesIndex.current < 0 ) {
+        entriesIndex.current += 1; 
+      } else {
+        entriesIndex.current -= 1;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  
 
   return (
     <>
@@ -217,56 +195,6 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     </>
   )
 }
-
-// function usePaginatedEntries(user: User | null, dbDate: string, n: number) {
-//   const [pages, setPages] = useState<Set<number>>(new Set([0])); // track loaded pages
-//   const [totalEntries, setTotalEntries] = useState<number | null>(null);
-
-//   if (!user) return null;
-
-//   // generate unique keys to represent entries
-//   // in cache
-//   const swrKeys = useMemo(() => {
-//     return Array.from(pages).map(() => 
-//       ['entries', user.uid, dbDate].join('-')
-//     );
-//   }, [pages, user, dbDate]);
-
-//   // use SWR to fetch all pages (maybe change to smaller amount)
-//   // for each db date
-//   const swrResults = swrKeys.map(key => {
-//     const [, , dbDate] = key.split('-'); // extract db date
-//     return useSWR(dbDate, async () => {
-//       const response = await get_n_entries(user, dbDate, n);
-//       return response;
-//     });
-//   });
-
-//   // combine all entries from loaded pages
-//   const allEntries = useMemo(() => {
-//     // map swr cache keys to journal entries
-//     const entriesMap = new Map<string, JournalEntry>();
-    
-//     swrResults.forEach((result, index) => {
-//       if (result.data?.entries) {
-//         result.data.entries.map((entry: JournalEntry) => {
-//           entriesMap.set(entry.id, entry);
-//         });
-        
-//         // Update total count if available
-//         if (result.data.total !== undefined) {
-//           setTotalEntries(result.data.total);
-//         }
-//       }
-//     });
-
-//     // Sort entries by date (assuming entries are chronological)
-//     return Array.from(entriesMap.values()).sort((a, b) => 
-//       new Date(a.created).getTime() - new Date(b.created).getTime()
-//     );
-//   }, [swrResults]);
-
-// }
 
 function useEntries(user: User | null, dbDate: string, n: number) {
   if (!user) {
