@@ -39,7 +39,7 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
     entries.reverse();
     
     // put add middle (current) entry
-    entries.push({created: dbDate, content: "sample content", favourite: false, tags: []} as JournalEntry);
+    entries.push({created: dbDate, content: "", favourite: false, tags: []} as JournalEntry);
 
     const afterQuery = query(ref, where("created", '>', dbDate), orderBy("created", "asc"), limit(n));
 
@@ -49,6 +49,22 @@ export async function get_n_entries(user: User, dbDate: string, n: number) {
 
     return entries;
 }
+
+export async function get_entries(user: User, dbDate: string, countBefore: number, countAfter: number) {  
+    if (!user) {
+      return null;
+    }
+
+    console.log("Making DB call");
+
+    const before: JournalEntry[] = await get_n_before(user, dbDate, countBefore);
+    const after: JournalEntry[] = await get_n_after(user, dbDate, countAfter);
+    const entries: JournalEntry[] = [...before, {created: dbDate, content: "", favourite: false, tags: []} as JournalEntry, ...after];
+
+    console.log("Entries");
+    console.log(entries);
+    return entries;
+  }
 
 
 export async function get_n_before(user: User, dbDate: string, n: number) {
@@ -61,6 +77,9 @@ export async function get_n_before(user: User, dbDate: string, n: number) {
     }));
 
     entries.reverse();
+
+    console.log("Entries before");
+    console.log(entries);
     return entries;
 }
 
@@ -73,5 +92,7 @@ export async function get_n_after(user: User, dbDate: string, n: number) {
         entries.push(doc.data() as JournalEntry);
     }))
 
+    console.log("Entries after");
+    console.log(entries);
     return entries;
 }
