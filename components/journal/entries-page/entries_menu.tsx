@@ -19,6 +19,7 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // array of journal entries to show the user
   const [displayEntries, setDisplayEntries] = useState<JournalEntry[]>([]);
+  const [done, setDone] = useState<boolean>(false);
 
   // index for the viewable entries
   const [activeIndex, setActiveIndex] = useState<number>(2);
@@ -37,14 +38,22 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     after: false
   });
 
+
+  // move count before and after out of component to cache 
+
   // TODO come up with a more efficient way of pulling the data
   // but knowing me I probably won't
   const fetched = useEntries(user, dbDate, countBefore, countAfter);
    
   if (!fetched) return null;
-
+  const data = fetched.data;
   // entire data fetched from firestore
-  const entries = fetched.entries;
+  const entries = data?.entries;
+  const pulledBeforeCount = data?.countBefore;
+  const pulledAfterCount = data?.countAfter;
+
+  console.log("Pulled before count ", pulledBeforeCount);
+  console.log("Pulled after count ", pulledAfterCount);
   
   useEffect(() => {
     // event listeners for keyboard navigation
@@ -52,15 +61,11 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
-          // entriesIndex.current -= 1;
           navigate_entries(entriesIndex.current - 1);
-          // check_bounds(activeIndex - 1);
           break;
         case "ArrowDown":
           event.preventDefault();
-          // entriesIndex.current += 1;
           navigate_entries(entriesIndex.current + 1);
-          // check_bounds(activeIndex + 1);
           break;
         case "Escape":
           event.preventDefault();
@@ -102,23 +107,29 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   const check_bounds_and_fetch = useCallback(() => {
     if (!entries) return;
-    console.log("Checking bounds");
     const currentPosition: number = entriesIndex.current;
-
     console.log("Current position ", currentPosition);
+    if (done) {console.log("Not happening"); return};
+    // console.log("Checking bounds");
+
+    
     const entriesCount: number = entries.length;
 
 
     // fetch data if bounds are exceeded
     if (currentPosition < PREFETCH_THRESHOLD && !prefetchingStatus.current.before) {
-      console.log("Fetching before");
       fetch_data("before");
-      entriesIndex.current += PREFETCH_THRESHOLD + 1;
+      // prevent rendering loop
+      // actual position will be set in in a side effect
+      // entriesIndex.current += 1;
     } else if (currentPosition > entriesCount - PREFETCH_THRESHOLD && !prefetchingStatus.current.after) {
-      console.log("Fetching after");
       fetch_data("after");
-      entriesIndex.current -= PREFETCH_THRESHOLD + 1
+      // prevent rendering loop
+      // actual position will be set in in a side effect
+      // entriesIndex.current -= 1
     }
+
+    setDone(true);
   }, [entries]);
 
   const update_display_entries = useCallback(() => {
@@ -160,6 +171,26 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       update_display_entries();
     }
   }, [entries, update_display_entries]);
+
+  useEffect(() => {
+    // set position of entries index
+
+    // position is calculated by 
+    // count before % DISPLAY_SIZE  + current position
+    if (pulledBeforeCount === undefined) return;
+  
+    console.log("Calculating index ");
+    console.log("Current index is ", entriesIndex.current);
+    console.log("MOdulus ", pulledBeforeCount % DISPLAY_SIZE);
+
+
+    const newIndex: number = pulledBeforeCount % DISPLAY_SIZE + entriesIndex.current
+
+    console.log("Index is ", newIndex);
+    entriesIndex.current = newIndex;
+    update_display_entries();
+
+  }, [pulledBeforeCount])
 
 
   function entry_index_out_of_bounds() {
@@ -212,5 +243,5 @@ function useEntries(user: User | null, dbDate: string, countBefore: number, coun
     revalidateOnFocus: false
   });
 
-  return {entries: data, error, isLoading};
+  return {data: data, error, isLoading};
 }
