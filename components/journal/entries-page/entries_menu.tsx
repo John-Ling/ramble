@@ -15,6 +15,7 @@ interface EntriesPageProps {
 
 export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps) {
   const DISPLAY_SIZE: number = 5; // pages to display per "page"
+  const PREFETCH_THRESHOLD: number = 3; 
 
   // array of journal entries to show the user
   const [displayEntries, setDisplayEntries] = useState<JournalEntry[]>([]);
@@ -28,17 +29,22 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   // starts in the middle
   const entriesIndex = useRef<number>(5); // change to n later
   const activeEntry = useRef<JournalEntry | null>(null);
+
+  // keep track of whether we are pre-fetching data before or after
+  // prevents duplicate requests being made
+  const prefetchingStatus = useRef<{ before: Boolean; after: Boolean}>( {
+    before: false,
+    after: false
+  });
+
+  // TODO come up with a more efficient way of pulling the data
+  // but knowing me I probably won't
   const fetched = useEntries(user, dbDate, countBefore, countAfter);
    
   if (!fetched) return null;
 
   // entire data fetched from firestore
   const entries = fetched.entries;
-
-  // set trigger bounds for entires
-  // set 5 to n
-  let bottomBound: number = 2;
-  let topBound: number =  !!entries ?  Math.min(entries.length - 3, entries.length - 1) : 5 * 2 - 1; // change 5 to n  
   
   useEffect(() => {
     // event listeners for keyboard navigation
@@ -71,30 +77,54 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
       document.removeEventListener('keydown', handleKeyDown);
     };
   })
-
-  // render active entry and adjacent entries
-  useEffect(() => {
-    if (!entries) return;
-    const buffer: JournalEntry[] = [];
-    const startIndex = entries.map((entry: JournalEntry) => entry.created).indexOf(dbDate);
-    for (let i = Math.max(startIndex - 2, 0); i < Math.min(startIndex + 3, entries.length); i++) {
-      buffer.push(entries[i]);
-    }
-
-    setDisplayEntries([...buffer]);
-    activeEntry.current = entries[activeIndex];
-  }, [entries]);
   
   function format_date(dbDate: string) {
     const split: string[] = dbDate.split('-');
     return `${split[2]}/${split[1]}/${split[0]}`
   }
 
+  const fetch_data = useCallback(async (direction: "before" | "after") => {
+    if (!entries || prefetchingStatus.current[direction]) return
+    prefetchingStatus.current[direction] = true;
+
+    if (direction === "before") {
+      setCountBefore(prev => prev + PREFETCH_THRESHOLD);
+    } else {
+      setCountAfter(prev => prev + PREFETCH_THRESHOLD);
+    }
+
+    // reset status after a short delay
+    // (debouncing)
+    setTimeout(() => {
+      prefetchingStatus.current[direction] = false;
+    }, 1000);
+  }, [entries])
+
+  const check_bounds_and_fetch = useCallback(() => {
+    if (!entries) return;
+    console.log("Checking bounds");
+    const currentPosition: number = entriesIndex.current;
+
+    console.log("Current position ", currentPosition);
+    const entriesCount: number = entries.length;
+
+
+    // fetch data if bounds are exceeded
+    if (currentPosition < PREFETCH_THRESHOLD && !prefetchingStatus.current.before) {
+      console.log("Fetching before");
+      fetch_data("before");
+      entriesIndex.current += PREFETCH_THRESHOLD + 1;
+    } else if (currentPosition > entriesCount - PREFETCH_THRESHOLD && !prefetchingStatus.current.after) {
+      console.log("Fetching after");
+      fetch_data("after");
+      entriesIndex.current -= PREFETCH_THRESHOLD + 1
+    }
+  }, [entries]);
+
   const update_display_entries = useCallback(() => {
     if (!entries || entries.length === 0) return;
     const currentPosition: number = entriesIndex.current;
     const half: number = Math.floor(DISPLAY_SIZE / 2);
-
     let startIndex = Math.max(0, currentPosition - half);
     let endIndex = Math.min(entries.length, startIndex + DISPLAY_SIZE);
 
@@ -111,7 +141,8 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     setActiveIndex(Math.max(0, Math.min(activeInBuffer, buffer.length - 1)));
 
     // add check for prefetching
-  }, [entries])
+    check_bounds_and_fetch();
+  }, [entries, check_bounds_and_fetch])
 
   const navigate_entries = useCallback((index: number) => {
     if (!entries || entry_index_out_of_bounds()) return;
@@ -140,64 +171,6 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     }
     return false;
   }
-
-
-   // don't look here disgusting code ewwwww
-  // const check_bounds = useCallback((index: number) => {
-  //   if (!entries || entry_index_out_of_bounds()) return;
-
-  //   if (entriesIndex.current <= bottomBound || entriesIndex.current >= topBound) {
-  //     // bounds of display entries are exceeded need to pull more data
-  //     console.log("Need to pull data ");
-
-  //     // then add it to our entries and increase the bounds respectively
-
-  //     if (fetched.isLoading) {
-  //       // if current fetching data
-  //       console.log("Currently fetching data");
-  //     } else {
-  //       if (entriesIndex.current <= bottomBound) {
-  //         setCountBefore(prev => prev + 5);
-  //       } else {
-  //         setCountAfter(prev => prev + 5);
-  //       }
-  //     }
-  //   }
-
-  //   // if index goes below bounds of buffer
-  //   if (index < 0) {
-  //     // pop at front and push to back
-
-  //     // get back element 
-  //     let backEntry: JournalEntry | undefined = undefined;
-  //     backEntry = entries[entriesIndex.current];
-
-  //     if (backEntry === undefined) return;
-
-  //     // pop front element
-  //     setDisplayEntries(prev => prev.filter((_, index) => index !== prev.length - 1));
-  //     setDisplayEntries(prev => [backEntry, ...prev])
-  //     return;
-  //   } else if (index >= displayEntries.length) { // index exceeds bounds of view
-  //     // push at front and pop at back
-  //     let frontEntry: JournalEntry | undefined = undefined;
-  //     frontEntry = entries[entriesIndex.current];
-
-  //     if (frontEntry === undefined) return;
-      
-  //     // pop back element
-  //     setDisplayEntries(prev => prev.filter((_, index) => index !== 0));
-  //     setDisplayEntries(prev => [...prev, frontEntry])
-  //     return;
-  //   }
-
-  //   // change dbdate
-  //   const newDate: string= displayEntries[index].created;
-  //   console.log(newDate);
-
-  //   setActiveIndex(index);
-  // }, [displayEntries.length]);
-
 
   return (
     <>
@@ -229,9 +202,9 @@ function useEntries(user: User | null, dbDate: string, countBefore: number, coun
     return null;
   }
 
-  console.log("calling useEntries");
-  console.log("countBefore ", countBefore);
-  console.log("countAfter ", countAfter);
+  // console.log("calling useEntries");
+  // console.log("countBefore ", countBefore);
+  // console.log("countAfter ", countAfter);
 
   const { data, error, isLoading } = useSWR([user, dbDate, countBefore, countAfter], 
                                             ([user, dbDate, countBefore, countAfter]) => get_entries(user, dbDate, countBefore, countAfter), {
