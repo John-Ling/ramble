@@ -25,17 +25,23 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // index for the viewable entries
   const [activeIndex, setActiveIndex] = useState<number>(2);
-  const [countBefore, setCountBefore] = useState<number>(5);
-  const [countAfter, setCountAfter] = useState<number>(5);
+  const [countBefore, setCountBefore] = useState<number>(DISPLAY_SIZE);
+  const [countAfter, setCountAfter] = useState<number>(DISPLAY_SIZE);
 
   // index for all the currently pulled entries 
   // starts in the middle
-  const entriesIndex = useRef<number>(5); // change to n later
+  const entriesIndex = useRef<number>(DISPLAY_SIZE); // change to n later
   const activeEntry = useRef<JournalEntry | null>(null);
 
   // keep track of whether we are pre-fetching data before or after
   // prevents duplicate requests being made
   const prefetchingStatus = useRef<{ before: Boolean; after: Boolean}>( {
+    before: false,
+    after: false
+  });
+
+  // determine whether limits for before and after have been reached
+  const stopFetching = useRef<{ before: Boolean; after: boolean }>({
     before: false,
     after: false
   });
@@ -49,11 +55,15 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
    
   if (!fetched) return null;
   const data = fetched.data;
-  // entire data fetched from firestore
   const entries = data?.entries;
+  // entire data fetched from firestore
+
   // at some point entries becomes null which causes the ui to freeze
   // could this be solved by saving the previous entries and serving it until the new one is pulled?
   // this problem I'll solve later since I need to get this project done. 
+
+  const previousBeforeCount = useRef<number | null>(null);
+  const previousAfterCount = useRef<number | null>(null);
 
   const pulledBeforeCount = data?.countBefore;
   const pulledAfterCount = data?.countAfter;
@@ -64,7 +74,6 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   useEffect(() => {
     // event listeners for keyboard navigation
     const handleKeyDown = (event: KeyboardEvent) => {
-      console.log("Key pressed");
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
@@ -119,20 +128,29 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     // if (done) {console.log("Not happening"); return};
     // console.log("Checking bounds");
 
+    if (!!previousAfterCount || !!previousBeforeCount) {
+      console.log("Checking");
+      if (previousAfterCount.current === pulledAfterCount) {
+        stopFetching.current["after"] = true;
+      } else if (previousBeforeCount.current === pulledBeforeCount) {
+        stopFetching.current["before"] = true;
+      }
+    }
     
     const entriesCount: number = entries.length;
 
     // fetch data if bounds are exceeded
-    if (currentPosition < PREFETCH_THRESHOLD && !prefetchingStatus.current.before) {
+    if (currentPosition < PREFETCH_THRESHOLD && !prefetchingStatus.current.before && !stopFetching.current["before"]) {
       fetch_data("before");
-      // prevent rendering loop temporarily
-      // actual position will be set in in a side effect
-      // entriesIndex.current += 1;
-    } else if (currentPosition > entriesCount - PREFETCH_THRESHOLD && !prefetchingStatus.current.after) {
+      if (pulledBeforeCount !== undefined) {
+        previousBeforeCount.current = pulledBeforeCount;  
+      }
+    } else if (currentPosition > entriesCount - PREFETCH_THRESHOLD && !prefetchingStatus.current.after && !stopFetching.current["after"]) {
       fetch_data("after");
-      // prevent rendering loop tempoarily
-      // actual position will be set in in a side effect
-      // entriesIndex.current += 1
+      
+      if (pulledAfterCount !== undefined) {
+        previousAfterCount.current = pulledAfterCount;
+      }
     }
   }, [entries]);
 
@@ -181,21 +199,15 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     // position is calculated by 
     // count before % DISPLAY_SIZE  + current position
     if (pulledBeforeCount === undefined) return;
-    const newIndex: number = pulledBeforeCount % DISPLAY_SIZE + entriesIndex.current
+    let offset: number = pulledBeforeCount % DISPLAY_SIZE;
+    if (offset === 0) {
+      offset = Math.floor(pulledBeforeCount / DISPLAY_SIZE);
+    }
+
+    const newIndex: number = offset + entriesIndex.current
     entriesIndex.current = newIndex;
     update_display_entries();
   }, [pulledBeforeCount])
-
-
-  function entry_index_out_of_bounds() {
-    if (!entries) return true;
-
-    if (entriesIndex.current < 0 || entriesIndex.current >= entries.length) {
-      console.log("Entries index reached bounds")
-      return true;
-    }
-    return false;
-  }
 
   return (
     <>
