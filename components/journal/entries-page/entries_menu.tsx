@@ -9,15 +9,25 @@ import useSWR from "swr";
 interface EntriesPageProps {
   user: User | null
   dbDate: string
-  n: number
+  displaySize: number
+  countBefore: number
+  countAfter: number
   onClose: () => void
+  increaseBeforeCount: () => void
+  increaseAfterCount: () => void
+  // setDbDate: (val: string) => void
+  on_enter: (entry: JournalEntry) => void
 }
 
-export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps) {
+// fix this layer I'm sick of working on this thing
+
+// fix loading freeze
+// load active index in correct position when reopening
+
+export default function EntriesPage({user, dbDate, displaySize, countBefore, countAfter, onClose, increaseBeforeCount, increaseAfterCount, on_enter}: EntriesPageProps) {
   // fix bug for render loop when pull data at bounds 
   // fix bug for ui freeze when pulling data ( later fix )
   
-  const DISPLAY_SIZE: number = 5; // pages to display per "page"
   const PREFETCH_THRESHOLD: number = 3; 
 
   // array of journal entries to show the user
@@ -25,13 +35,15 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
 
   // index for the viewable entries
   const [activeIndex, setActiveIndex] = useState<number>(2);
-  const [countBefore, setCountBefore] = useState<number>(DISPLAY_SIZE);
-  const [countAfter, setCountAfter] = useState<number>(DISPLAY_SIZE);
+  // const [countBefore, setCountBefore] = useState<number>(displaySize);
+  // const [countAfter, setCountAfter] = useState<number>(displaySize);
 
   // index for all the currently pulled entries 
   // starts in the middle
-  const entriesIndex = useRef<number>(DISPLAY_SIZE); // change to n later
-  const activeEntry = useRef<JournalEntry | null>(null);
+
+  // when count after and before has changed
+  // this display size will no longer be the correct index fix this later
+  const entriesIndex = useRef<number>(displaySize);
 
   // keep track of whether we are pre-fetching data before or after
   // prevents duplicate requests being made
@@ -87,6 +99,12 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
           event.preventDefault();
           onClose();
           break;
+        case "Enter":
+          event.preventDefault();
+          if (!entries) break;
+          const activeEntry: JournalEntry = entries[entriesIndex.current];
+          on_enter(activeEntry);
+          break;
         default:
           break;
       }
@@ -109,9 +127,11 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
     prefetchingStatus.current[direction] = true;
 
     if (direction === "before") {
-      setCountBefore(prev => prev + PREFETCH_THRESHOLD);
+      // setCountBefore(prev => prev + PREFETCH_THRESHOLD);
+      increaseBeforeCount();
     } else {
-      setCountAfter(prev => prev + PREFETCH_THRESHOLD);
+      // setCountAfter(prev => prev + PREFETCH_THRESHOLD);
+      increaseAfterCount();
     }
 
     // reset status after a short delay
@@ -157,13 +177,13 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   const update_display_entries = useCallback(() => {
     if (!entries || entries.length === 0) return;
     const currentPosition: number = entriesIndex.current;
-    const half: number = Math.floor(DISPLAY_SIZE / 2);
+    const half: number = Math.floor(displaySize / 2);
     let startIndex = Math.max(0, currentPosition - half);
-    let endIndex = Math.min(entries.length, startIndex + DISPLAY_SIZE);
+    let endIndex = Math.min(entries.length, startIndex + displaySize);
 
-    if (endIndex - startIndex < DISPLAY_SIZE && entries.length >= DISPLAY_SIZE) {
+    if (endIndex - startIndex < displaySize && entries.length >= displaySize) {
       // adjust if near the end
-      startIndex = Math.max(0, endIndex - DISPLAY_SIZE);
+      startIndex = Math.max(0, endIndex - displaySize);
     }
 
     const buffer = entries.slice(startIndex, endIndex);
@@ -197,14 +217,17 @@ export default function EntriesPage({user, dbDate, n, onClose}: EntriesPageProps
   useEffect(() => {
     // set position of entries index
     // position is calculated by 
-    // count before % DISPLAY_SIZE  + current position
+    // count before % displaySize  + current position
     if (pulledBeforeCount === undefined) return;
-    let offset: number = pulledBeforeCount % DISPLAY_SIZE;
-    if (offset === 0) {
-      offset = Math.floor(pulledBeforeCount / DISPLAY_SIZE);
+
+    let offset: number = pulledBeforeCount % displaySize;
+    if (offset === 0 && pulledBeforeCount !== displaySize) {
+      offset = Math.floor(pulledBeforeCount / displaySize);
     }
 
     const newIndex: number = offset + entriesIndex.current
+
+    console.log("NEW INDEX ", newIndex);
     entriesIndex.current = newIndex;
     update_display_entries();
   }, [pulledBeforeCount])

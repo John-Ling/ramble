@@ -19,7 +19,22 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(false);
   const currentDate: string = new Date().toLocaleDateString();
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
+
+  // entries menu
+  const DISPLAY_SIZE: number = 5; // pages to display per "page"
+  const PREFETCH_THRESHOLD: number = 3; 
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
+  const [countBefore, setCountBefore] = useState<number>(DISPLAY_SIZE);
+  const [countAfter, setCountAfter] = useState<number>(DISPLAY_SIZE);
+  const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
+
+  function increase_before_count() {
+    setCountBefore(prev => prev + PREFETCH_THRESHOLD)
+  }
+
+  function increase_after_count() {
+    setCountAfter(prev => prev + PREFETCH_THRESHOLD);
+  }
 
   // format date into dbDate
   function format_date(date: string) {
@@ -27,7 +42,7 @@ export default function JournalPage() {
     return `${split[2]}-${split[1]}-${split[0]}`
   }
 
-  const dbDate: string = format_date(currentDate);
+  // const dbDate: string = format_date(currentDate);
 
   useEffect(() => {
     // attach event listener for autosave
@@ -61,7 +76,7 @@ export default function JournalPage() {
   if (loading) return <h1>Loading</h1>
   if (!authenticated) return null;
 
-  async  function save() {
+  async function save() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
@@ -83,11 +98,16 @@ export default function JournalPage() {
     return;
   }
 
+  function load_entry(entry: JournalEntry) {
+    setDbDate(entry.created);
+    setContent(entry.content);
+  }
+
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {/* entry selector  */}
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} n={2} onClose={() => setEntriesVisible(false)} /> : null}
+        {/* entry selector  make the props better */}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} displaySize={DISPLAY_SIZE} countBefore={countBefore} countAfter={countAfter} increaseAfterCount={increase_after_count} increaseBeforeCount={increase_before_count} onClose={() => setEntriesVisible(false)} on_enter={load_entry}  /> : null}
         {/* menubar */}
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
@@ -98,7 +118,7 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{currentDate}</h1>
+            <h1 className="p-2">{dbDate}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
