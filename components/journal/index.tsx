@@ -90,9 +90,7 @@ export default function JournalPage() {
 
   async function autosave() {
     if (content !== saved && pendingSave) {
-      // run save code
       await save();
-      return;
     } 
     setPendingSave(true);
     return;
@@ -106,12 +104,12 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {/* entry selector  make the props better */}
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} displaySize={DISPLAY_SIZE} countBefore={countBefore} countAfter={countAfter} increaseAfterCount={increase_after_count} increaseBeforeCount={increase_before_count} onClose={() => setEntriesVisible(false)} on_enter={load_entry}  /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate}  on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
+
         {/* menubar */}
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
-            <h1 className="font-bold text-2xl">Ramble</h1>
+            <h1 className="font-bold text-2xl">RAMBLE</h1>
             <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={google_sign_out}/>
           </div>
         </div>
@@ -125,8 +123,7 @@ export default function JournalPage() {
                     disabled={loadingData} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
                     className="h-[85vh]" 
-                    value={content}/>
-          
+                    value={content}/>  
         </div>    
       </div> 
     </>
