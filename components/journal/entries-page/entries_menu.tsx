@@ -63,7 +63,6 @@ export default function EntriesPage({user, dbDate, on_close, on_entry_select}: E
   const data = fetched.data;
   if (!data) return null;
   const entries = data.entries;
-
   
   return (
     <>
