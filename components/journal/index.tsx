@@ -1,7 +1,7 @@
 "use client";
 
 import { Textarea } from "../ui/textarea";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 
@@ -11,6 +11,7 @@ import { get_entry, write_entry } from "@/lib/firebase/db";
 
 import { Button } from "../ui/button";
 
+import { db_date_to_date, date_to_db_date  } from "@/lib/utils";
 
 export default function JournalPage() {
   const {authenticated, user, loading, check_auth_client} = useAuth();  
@@ -22,16 +23,9 @@ export default function JournalPage() {
 
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
-  const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
+  const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const [fetchCount, setFetchCount] = useState<number>(12);
-
-  // format date into dbDate
-  function format_date(date: string) {
-    const split: string[] = date.split('/');
-    return `${split[2]}-${split[1]}-${split[0]}`
-  }
-
-  // const dbDate: string = format_date(currentDate);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     // attach event listener for autosave
@@ -72,6 +66,7 @@ export default function JournalPage() {
     }
 
     setPendingSave(true);
+    textareaRef.current?.focus();
     return;
   }
 
@@ -83,15 +78,21 @@ export default function JournalPage() {
     return;
   }
 
-  function load_entry(entry: JournalEntry) {
+  const load_entry = (entry: JournalEntry) => {
     setDbDate(entry.created);
     setContent(entry.content);
+  }
+
+  const on_entry_menu_close = () => {
+    setEntriesVisible(false);
+    textareaRef.current?.focus();
+    return;
   }
 
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> : null}
 
         {/* menubar */}
         <div className="flex w-full justify-center">
@@ -103,14 +104,15 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{dbDate}</h1>
+            <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={loadingData} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
                     className="h-[85vh]" 
-                    value={content}/>  
+                    value={content}
+                    ref={textareaRef}/>  
         </div>    
       </div> 
     </>
