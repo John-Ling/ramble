@@ -21,7 +21,7 @@ export default function JournalPage() {
   const [loadingData, setLoadingData] = useState<boolean>(true);
 
   // entries menu
-  const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
   const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
   const [fetchCount, setFetchCount] = useState<number>(12);
 
@@ -45,7 +45,7 @@ export default function JournalPage() {
     // load data
     if (!!user) {
       console.log("Reading");
-      get_entry(user, dbDate).then((entry: JournalEntry | null) => {
+      get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
         console.log("Got data back");
         if (!!entry) {
           console.log(entry.content);
@@ -64,13 +64,14 @@ export default function JournalPage() {
   // do checks there instead of here
   if (loading) return <h1>Loading</h1>
   if (!authenticated) return null;
+  if (!user) return null;
 
   async function save() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     if (!!user) {
-      await write_entry(user, dbDate, entry);
+      await write_entry(user.uid, dbDate, entry);
     }
 
     setPendingSave(true);

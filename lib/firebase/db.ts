@@ -3,17 +3,17 @@ import { setDoc, doc, getDoc, collection, query, where, orderBy, limit, getDocs,
 import { db } from "./config";
 
 
-export async function write_entry(user: User, dbDate: string,  entry: JournalEntry) {
+export async function write_entry(userID: string, dbDate: string,  entry: JournalEntry) {
     // write an entry to firestore under user under dbDate as id
-    const ref = doc(db, "users", user.uid, "entries", dbDate);
+    const ref = doc(db, "users", userID, "entries", dbDate);
     await setDoc(ref, entry, {merge: true});
     console.log("wrote document");
     return;
 }
 
-export async function get_entry(user: User, dbDate: string) {
+export async function get_entry(userID: string, dbDate: string) {
     // return the record in firestore for user under dbDate as id
-    const ref = doc(db, "users", user.uid, "entries", dbDate);
+    const ref = doc(db, "users", userID, "entries", dbDate);
     const docSnap = await getDoc(ref);
 
     if (docSnap.exists()) {
@@ -25,13 +25,12 @@ export async function get_entry(user: User, dbDate: string) {
     }
 }
 
-export async function get_entries(user: User, dbDate: string, fetchCount: number = 12) {
+export async function get_entries(userID: string, dbDate: string, fetchCount: number = 12) {
     // attempt to pull fetchCount + 1 entries starting from dbDate including dbDate's own entry
     // fetchCount will be shown to the user but the last dbDate will be saved and hidden
     // it will be used as the next dbDate to pull future entries
-    if (!user) return null;
     const entries: JournalEntry[] = [];
-    const startDocument: JournalEntry | null = await get_entry(user, dbDate);
+    const startDocument: JournalEntry | null = await get_entry(userID, dbDate);
 
     if (startDocument) {
         entries.push(startDocument);
@@ -41,15 +40,13 @@ export async function get_entries(user: User, dbDate: string, fetchCount: number
     }
     
     // try pull 11 documents for 12 viewable  + 1 extra to save as the next startDocument
-    const ref = collection(db, "users", user.uid, "entries");
+    const ref = collection(db, "users", userID, "entries");
     const q = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(fetchCount));
     const response = await getDocs(q);
 
     response.forEach(doc => {
         entries.push(doc.data() as JournalEntry);
     });
-
-    console.log(entries.length);
     
     let finalDocument: JournalEntry | undefined = undefined;
     if (entries.length == fetchCount + 1) {
