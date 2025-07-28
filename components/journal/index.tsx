@@ -28,14 +28,6 @@ export default function JournalPage() {
   const [countAfter, setCountAfter] = useState<number>(DISPLAY_SIZE);
   const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
 
-  function increase_before_count() {
-    setCountBefore(prev => prev + PREFETCH_THRESHOLD)
-  }
-
-  function increase_after_count() {
-    setCountAfter(prev => prev + PREFETCH_THRESHOLD);
-  }
-
   // format date into dbDate
   function format_date(date: string) {
     const split: string[] = date.split('/');
@@ -104,7 +96,7 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate}  on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={12} on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
 
         {/* menubar */}
         <div className="flex w-full justify-center">

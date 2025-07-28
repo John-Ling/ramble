@@ -25,9 +25,9 @@ export async function get_entry(user: User, dbDate: string) {
     }
 }
 
-export async function get_entries(user: User, dbDate: string) {
-    // attempt to pull 13 entries starting from dbDate including dbDate's own entry
-    // 12 will be shown to the user but the last dbDate will be saved and hidden
+export async function get_entries(user: User, dbDate: string, fetchCount: number = 12) {
+    // attempt to pull fetchCount + 1 entries starting from dbDate including dbDate's own entry
+    // fetchCount will be shown to the user but the last dbDate will be saved and hidden
     // it will be used as the next dbDate to pull future entries
     if (!user) return null;
     const entries: JournalEntry[] = [];
@@ -42,7 +42,7 @@ export async function get_entries(user: User, dbDate: string) {
     
     // try pull 11 documents for 12 viewable  + 1 extra to save as the next startDocument
     const ref = collection(db, "users", user.uid, "entries");
-    const q = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(12));
+    const q = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(fetchCount));
     const response = await getDocs(q);
 
     response.forEach(doc => {
@@ -50,7 +50,7 @@ export async function get_entries(user: User, dbDate: string) {
     });
     
     let  finalDocument: JournalEntry | undefined = undefined;
-    if (entries.length == 13) {
+    if (entries.length == fetchCount + 1) {
         // remove final entry and keep track of it
         finalDocument = entries.pop();
     }
