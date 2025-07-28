@@ -20,7 +20,7 @@ export default function SettingsMenu({onEntries = undefined, onPrefs = undefined
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="size-8" disabled={disabled} aria-disabled={disabled}>
+        <DropdownMenuTrigger className="size-8 hover:text-gray-300" disabled={disabled} aria-disabled={disabled}>
           <Settings />
         </DropdownMenuTrigger>
         <DropdownMenuContent>

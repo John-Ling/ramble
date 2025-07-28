@@ -1,5 +1,5 @@
 import { User } from "firebase/auth";
-import { setDoc, doc, getDoc, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { setDoc, doc, getDoc, collection, query, where, orderBy, limit, getDocs, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
 import { db } from "./config";
 
 
@@ -48,8 +48,10 @@ export async function get_entries(user: User, dbDate: string, fetchCount: number
     response.forEach(doc => {
         entries.push(doc.data() as JournalEntry);
     });
+
+    console.log(entries.length);
     
-    let  finalDocument: JournalEntry | undefined = undefined;
+    let finalDocument: JournalEntry | undefined = undefined;
     if (entries.length == fetchCount + 1) {
         // remove final entry and keep track of it
         finalDocument = entries.pop();

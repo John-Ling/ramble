@@ -21,12 +21,9 @@ export default function JournalPage() {
   const [loadingData, setLoadingData] = useState<boolean>(true);
 
   // entries menu
-  const DISPLAY_SIZE: number = 5; // pages to display per "page"
-  const PREFETCH_THRESHOLD: number = 3; 
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
-  const [countBefore, setCountBefore] = useState<number>(DISPLAY_SIZE);
-  const [countAfter, setCountAfter] = useState<number>(DISPLAY_SIZE);
   const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
+  const [fetchCount, setFetchCount] = useState<number>(12);
 
   // format date into dbDate
   function format_date(date: string) {
@@ -96,7 +93,7 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={12} on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={() => setEntriesVisible(false)} on_entry_select={load_entry}  /> : null}
 
         {/* menubar */}
         <div className="flex w-full justify-center">
