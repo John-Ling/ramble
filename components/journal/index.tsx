@@ -21,7 +21,7 @@ export default function JournalPage() {
   const [loadingData, setLoadingData] = useState<boolean>(true);
 
   // entries menu
-  const [entriesVisible, setEntriesVisible] = useState<boolean>(true);
+  const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [dbDate, setDbDate] = useState<string>(format_date(currentDate))
   const [fetchCount, setFetchCount] = useState<number>(12);
 
@@ -44,11 +44,8 @@ export default function JournalPage() {
   useEffect(() => {
     // load data
     if (!!user) {
-      console.log("Reading");
       get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
-        console.log("Got data back");
         if (!!entry) {
-          console.log(entry.content);
           setContent(entry.content);
           setSaved(entry.content);
         }

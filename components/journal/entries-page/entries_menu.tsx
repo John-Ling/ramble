@@ -16,13 +16,6 @@ interface EntriesPageProps {
   on_entry_select: (entry: JournalEntry) => void;
 }
 
-// new entries menu
-// create a grid like view with option for compressed
-// data is just pulled downwards
-// arrow keys can be used to navigate
-// as can scrolling
-// when scroll exceeds bounds next gets loaded
-
 export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const entryMenuRef = useRef<HTMLDivElement>(null);
@@ -30,6 +23,8 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
   useEffect(() => {
     // event listeners for keyboard navigation
     const on_key_down = (event: KeyboardEvent) => {
+      if (!entries) return;
+
       switch (event.key) {
         case "ArrowUp":
           event.preventDefault();
@@ -39,20 +34,15 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
           break;
         case "ArrowDown":
           event.preventDefault();
-          console.log("Down");
-          console.log(activeIndex);
           if (activeIndex >= entries.length - 4 || activeIndex + 4 >= entries.length) break;
           setActiveIndex(prev => prev + 4);
           break;
         case "ArrowLeft":
-          console.log("LEft");
           event.preventDefault();
           setActiveIndex(Math.max(0, activeIndex - 1) );
           break;
         case "ArrowRight":
-          console.log("Right");
           event.preventDefault();
-    
           if (activeIndex + 1 >= entries.length) break;
           setActiveIndex(prev => prev + 1);
           break;
@@ -97,10 +87,13 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
   // index for the viewable entries
   const fetched = useEntries(user.uid, dbDate, fetchCount);
    
-  if (!fetched) return null;
+  if (!fetched) {
+    console.log("Fetched is null")
+    return null
+  };
+
   const data = fetched.data;
-  if (!data) return null;
-  const entries = data.entries;
+  const entries = data?.entries;
 
   return (
     <>
@@ -111,8 +104,8 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
             <Button variant="ghost" size="icon" className="size-8" onClick={on_close}><X /></Button>
           </div>
           { fetched.isLoading ? <p>Loading...</p> : <div className="flex justify-center items-center">
-            <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-12 mt-10">
-              {entries.map((entry: JournalEntry, i: number) => {
+            <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10">
+              {entries?.map((entry: JournalEntry, i: number) => {
                 return (
                   <div key={i} onClick={() => alert("Clicked")} className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
                     <File size={32} />
@@ -132,8 +125,6 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
 }
 
 function useEntries(userID: string, dbDate: string, fetchCount: number) {
-  console.log("Calling useEntries");
-
   const { data, error, isLoading } = useSWR([userID, dbDate, fetchCount], ([userID, dbDate, fetchCount]) => get_entries(userID, dbDate, fetchCount), {
     dedupingInterval: 5000,
     revalidateOnFocus: false
