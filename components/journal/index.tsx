@@ -69,7 +69,7 @@ export default function JournalPage() {
       await write_entry(user.uid, dbDate, entry);
     }
 
-    setPendingSave(true);
+    setTimeout(() => setPendingSave(true), 1000);
     textareaRef.current?.focus();
     return;
   }
@@ -77,7 +77,7 @@ export default function JournalPage() {
   async function autosave() {
     if (content !== saved && pendingSave) {
       await save();
-    } 
+    }
     setPendingSave(true);
     return;
   }
@@ -112,7 +112,7 @@ export default function JournalPage() {
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                    disabled={loadingData || readOnly} 
+                    disabled={loadingData || readOnly || !pendingSave} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
                     className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
