@@ -18,14 +18,17 @@ export default function JournalPage() {
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(false);
-  const currentDate: string = new Date().toLocaleDateString();
   const [loadingData, setLoadingData] = useState<boolean>(true);
+  const currentDate: string = new Date().toLocaleDateString();  
+  const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // entries menu
+  
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
-  const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const [fetchCount, setFetchCount] = useState<number>(12);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // keep track of the original DB date so the starting entry does not change
+  const originalDbDate = date_to_db_date(currentDate);
 
   useEffect(() => {
     // attach event listener for autosave
@@ -92,7 +95,7 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {entriesVisible ? <EntriesPage user={user} dbDate={dbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> : null}
+        {entriesVisible ? <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> : null}
 
         {/* menubar */}
         <div className="flex w-full justify-center">

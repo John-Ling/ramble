@@ -68,13 +68,6 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     };
   });
 
-  const fetched = useEntries(user.uid, dbDate, fetchCount);
-   
-  if (!fetched) return null
-  const data = fetched.data;
-  const entries: JournalEntry[] | undefined = data?.entries;
-  const areDocumentsLeft = data?.areDocumentsLeft;
-
   useEffect(() => {
     // scroll event listeners
     const on_scroll = (event: Event) => {
@@ -100,6 +93,13 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     }
   });
 
+  const fetched = useEntries(user.uid, dbDate, fetchCount);
+   
+  if (!fetched) return null
+  const data = fetched.data;
+  const entries: JournalEntry[] | undefined = data?.entries;
+  const areDocumentsLeft = data?.areDocumentsLeft;
+
   return (
     <>
       <div className="fixed top-0 min-h-screen w-full flex justify-center items-center z-20">
@@ -112,7 +112,7 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
             <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
               {entries?.map((entry: JournalEntry, i: number) => {
                 return (
-                  <div key={i} onClick={() => alert("Clicked")} className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
+                  <div key={i} onClick={() => alert("Clicked")}  className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
                     <FileText size={48} />
                     <p className="text-sm ">
                       {entry.created}
