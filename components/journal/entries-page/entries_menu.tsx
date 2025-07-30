@@ -2,9 +2,8 @@
 import { get_entries } from "@/lib/firebase/db";
 import { User } from "firebase/auth";
 import { useEffect, useRef, useState, useCallback } from "react"
-import { X } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { File } from "lucide-react";
 import useSWR from "swr";
 
 interface EntriesPageProps {
@@ -52,6 +51,10 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
           break;
         case "Enter":
           event.preventDefault();
+          const entry: JournalEntry | undefined = data?.entries[activeIndex];
+          if (!!entry) {
+            on_entry_select(entry);
+          }
           break;
         default:
           break;
@@ -65,14 +68,27 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     };
   });
 
+  const fetched = useEntries(user.uid, dbDate, fetchCount);
+   
+  if (!fetched) return null
+  const data = fetched.data;
+  const entries: JournalEntry[] | undefined = data?.entries;
+  const areDocumentsLeft = data?.areDocumentsLeft;
+
   useEffect(() => {
     // scroll event listeners
     const on_scroll = (event: Event) => {
       if (!entryMenuRef.current) return;
 
+      // if entries menu has been scrolled to the bottom
       if (Math.ceil(entryMenuRef.current.scrollHeight - entryMenuRef.current.scrollTop) === entryMenuRef.current.clientHeight) {
-        console.log("Reached bottom");
-        set_fetch_count();
+        if (areDocumentsLeft === undefined) {
+          return;
+        }
+
+        if (areDocumentsLeft) {
+          set_fetch_count();
+        }
       }
 
       return;
@@ -84,17 +100,6 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     }
   });
 
-  // index for the viewable entries
-  const fetched = useEntries(user.uid, dbDate, fetchCount);
-   
-  if (!fetched) {
-    console.log("Fetched is null")
-    return null
-  };
-
-  const data = fetched.data;
-  const entries = data?.entries;
-
   return (
     <>
       <div className="fixed top-0 min-h-screen w-full flex justify-center items-center z-20">
@@ -104,12 +109,12 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
             <Button variant="ghost" size="icon" className="size-8" onClick={on_close}><X /></Button>
           </div>
           { fetched.isLoading ? <p>Loading...</p> : <div className="flex justify-center items-center">
-            <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10">
+            <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
               {entries?.map((entry: JournalEntry, i: number) => {
                 return (
                   <div key={i} onClick={() => alert("Clicked")} className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
-                    <File size={32} />
-                    <p className="text-sm">
+                    <FileText size={48} />
+                    <p className="text-sm ">
                       {entry.created}
                     </p>
                   </div>

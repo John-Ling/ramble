@@ -42,17 +42,32 @@ export async function get_entries(userID: string, dbDate: string, fetchCount: nu
     // try pull 11 documents for 12 viewable  + 1 extra to save as the next startDocument
     const ref = collection(db, "users", userID, "entries");
     const q = query(ref, where("created", '<', dbDate), orderBy("created", "desc"), limit(fetchCount));
-    const response = await getDocs(q);
+    let response = await getDocs(q);
 
     response.forEach(doc => {
         entries.push(doc.data() as JournalEntry);
     });
     
+
+    let areDocumentsLeft = true;
     let finalDocument: JournalEntry | undefined = undefined;
-    if (entries.length == fetchCount + 1) {
+
+    if (entries.length !== fetchCount + 1) {
+        // if less than fetchCount documents have been pulled we have run out
+        // no docs left
+        areDocumentsLeft = false;
+    } else {
         // remove final entry and keep track of it
         finalDocument = entries.pop();
+
+        if (finalDocument !== undefined) {
+            // check if there are any entries left to pull after this final document
+            let response = await getDocs(query(ref, where("created", '<', finalDocument.created), orderBy("created", "desc"), limit(1)));
+            if (response.empty) {
+                areDocumentsLeft = false;
+            }
+        }
     }
 
-    return { entries: entries, startEntry: startDocument, endEntry: finalDocument}
+    return { entries: entries, startEntry: startDocument, endEntry: finalDocument, areDocumentsLeft: areDocumentsLeft }
 }
