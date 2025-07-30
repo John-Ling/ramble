@@ -24,11 +24,12 @@ export default function JournalPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // entries menu
-  
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [fetchCount, setFetchCount] = useState<number>(12);
-  // keep track of the original DB date so the starting entry does not change
   const originalDbDate = date_to_db_date(currentDate);
+
+  // users can only read old entries not make edits to them
+  const readOnly = db_date_to_date(currentDate) === dbDate;
 
   useEffect(() => {
     // attach event listener for autosave
@@ -111,9 +112,9 @@ export default function JournalPage() {
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                    disabled={loadingData} 
+                    disabled={loadingData || readOnly} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
-                    className="h-[85vh]" 
+                    className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
                     ref={textareaRef}/>  
         </div>    
