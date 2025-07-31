@@ -98,19 +98,19 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
 
   return (
     <>
-      <div className="fixed top-0 min-h-screen w-full flex justify-center items-center z-20">
         <div className="bg-[#101010] w-4/5 lg:1/2 xl:w-1/3  h-[50vh]  lg:h-[35vh] z-40 flex flex-col overflow-scroll rounded-sm" ref={entryMenuRef}>
           <div className="flex justify-between sticky top-0 bg-[#141414] border-b-1 p-4">
             <h1 className="font-bold text-2xl">Entries</h1>
             <Button variant="ghost" size="icon" className="size-8" onClick={on_close}><X /></Button>
           </div>
-          { fetched.isLoading ? <p>Loading...</p> : <div className="flex justify-center items-center">
+          { fetched.isLoading ? <p>Loading...</p> : 
+          <div className="flex justify-center items-center">
             <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
               {entries?.map((entry: JournalEntry, i: number) => {
                 return (
                   <div key={i} onClick={() => alert("Clicked")}  className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
                     <FileText size={48} />
-                    <p className="text-sm ">
+                    <p className="text-sm">
                       {entry.created}
                     </p>
                   </div>
@@ -120,7 +120,6 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
           </div>}
         </div>
         <div className="absolute w-full h-full bg-black/50 z-30" onMouseDown={on_close}></div>
-      </div>
     </>
   )
 }

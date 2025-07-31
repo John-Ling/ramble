@@ -18,7 +18,7 @@ export default function JournalPage() {
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
   const [loadingData, setLoadingData] = useState<boolean>(true);
-  const currentDate: string = new Date().toLocaleDateString();  
+  const currentDate: string = new Date().toLocaleDateString();
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,7 +78,6 @@ export default function JournalPage() {
   }
 
   async function save_with_delay() {
-    console.log("Autosaving");
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
@@ -116,7 +115,9 @@ export default function JournalPage() {
   return (
     <>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        {entriesVisible ? <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> : null}
+        <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
+          <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
+        </div>
 
         {/* menubar */}
         <div className="flex w-full justify-center">

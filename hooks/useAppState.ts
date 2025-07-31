@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { User } from "firebase/auth";
 
 interface AppState {
-  user: User | null
-  authenticated: boolean
-  signIn: (user: User) => void
-  signOut: () => void
+  user: User | null;
+  authenticated: boolean;
+  signIn: (user: User) => void;
+  signOut: () => void;
 }
 
 export const useAppState = create<AppState>()((set) => ({
