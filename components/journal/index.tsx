@@ -1,23 +1,22 @@
 "use client";
 
 import { Textarea } from "../ui/textarea";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 
-import { google_sign_out } from "@/lib/firebase/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { get_entry, write_entry } from "@/lib/firebase/db";
 
 import { Button } from "../ui/button";
 
-import { db_date_to_date, date_to_db_date  } from "@/lib/utils";
+import { db_date_to_date, date_to_db_date, logout_google  } from "@/lib/utils";
 
 export default function JournalPage() {
   const {authenticated, user, loading, check_auth_client} = useAuth();  
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
-  const [pendingSave, setPendingSave] = useState<boolean>(false);
+  const [pendingSave, setPendingSave] = useState<boolean>(true);
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const currentDate: string = new Date().toLocaleDateString();  
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
@@ -32,14 +31,15 @@ export default function JournalPage() {
   const readOnly = db_date_to_date(currentDate) === dbDate;
 
   useEffect(() => {
-    // attach event listener for autosave
-    const interval = setInterval(autosave, 1000);
+    // autosave at fixed intervals
+    const AUTOSAVE_INTERVAL = 2000;
+    const interval = setInterval(autosave, AUTOSAVE_INTERVAL);
     return (() => {
       clearInterval(interval);
     })
   });
 
-  useEffect(() => {
+  const load_data = useCallback(() => {
     // load data
     if (!!user) {
       get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
@@ -52,6 +52,10 @@ export default function JournalPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    load_data();
+  }, [load_data]);
+
   
   check_auth_client();
 
@@ -61,7 +65,7 @@ export default function JournalPage() {
   if (!authenticated) return null;
   if (!user) return null;
 
-  async function save() {
+  async function save_without_delay() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
@@ -69,14 +73,30 @@ export default function JournalPage() {
       await write_entry(user.uid, dbDate, entry);
     }
 
-    setTimeout(() => setPendingSave(true), 1000);
+    setPendingSave(true);
     textareaRef.current?.focus();
+  }
+
+  async function save_with_delay() {
+    console.log("Autosaving");
+    setSaved(content);
+    setPendingSave(false);
+    const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
+    if (!!user) {
+      await write_entry(user.uid, dbDate, entry);
+    }
+
+    setTimeout(() => {
+      setPendingSave(true);
+      textareaRef.current?.focus();
+    }, 1000);
+    
     return;
   }
 
   async function autosave() {
     if (content !== saved && pendingSave) {
-      await save();
+      await save_without_delay();
     }
     setPendingSave(true);
     return;
@@ -102,14 +122,14 @@ export default function JournalPage() {
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
             <h1 className="font-bold text-2xl">RAMBLE</h1>
-            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={google_sign_out}/>
+            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={logout_google}/>
           </div>
         </div>
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
             <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
-            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save}>Save</Button>
+            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={loadingData || readOnly || !pendingSave} 

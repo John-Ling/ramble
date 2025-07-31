@@ -14,6 +14,7 @@ export async function write_entry(userID: string, dbDate: string,  entry: Journa
 export async function get_entry(userID: string, dbDate: string) {
     // return the record in firestore for user under dbDate as id
     const ref = doc(db, "users", userID, "entries", dbDate);
+    console.log("Reading DB");
     const docSnap = await getDoc(ref);
 
     if (docSnap.exists()) {
@@ -49,22 +50,23 @@ export async function get_entries(userID: string, dbDate: string, fetchCount: nu
     });
     
 
-    let areDocumentsLeft = true;
+    let areDocumentsLeft = false;
     let finalDocument: JournalEntry | undefined = undefined;
 
     if (entries.length !== fetchCount + 1) {
         // if less than fetchCount documents have been pulled we have run out
-        // no docs left
-        areDocumentsLeft = false;
+        console.log("No documents left");
     } else {
         // remove final entry and keep track of it
         finalDocument = entries.pop();
 
+        console.log("Final Document", finalDocument);
+
         if (finalDocument !== undefined) {
             // check if there are any entries left to pull after this final document
             let response = await getDocs(query(ref, where("created", '<', finalDocument.created), orderBy("created", "desc"), limit(1)));
-            if (response.empty) {
-                areDocumentsLeft = false;
+            if (!response.empty) {
+                areDocumentsLeft = true;
             }
         }
     }

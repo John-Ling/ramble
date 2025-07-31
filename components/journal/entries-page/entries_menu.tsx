@@ -68,37 +68,33 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     };
   });
 
-  useEffect(() => {
-    // scroll event listeners
-    const on_scroll = (event: Event) => {
-      if (!entryMenuRef.current) return;
-
-      // if entries menu has been scrolled to the bottom
-      if (Math.ceil(entryMenuRef.current.scrollHeight - entryMenuRef.current.scrollTop) === entryMenuRef.current.clientHeight) {
-        if (areDocumentsLeft === undefined) {
-          return;
-        }
-
-        if (areDocumentsLeft) {
-          set_fetch_count();
-        }
-      }
-
-      return;
-    }
-    entryMenuRef.current?.addEventListener("scroll", on_scroll);
-
-    return () => {
-      entryMenuRef.current?.removeEventListener("scroll", on_scroll);
-    }
-  });
-
   const fetched = useEntries(user.uid, dbDate, fetchCount);
    
   if (!fetched) return null
   const data = fetched.data;
   const entries: JournalEntry[] | undefined = data?.entries;
   const areDocumentsLeft = data?.areDocumentsLeft;
+
+  const on_scroll = useCallback(() => {
+    if (!entryMenuRef.current) return;
+    if (areDocumentsLeft === undefined || areDocumentsLeft === null) return;
+
+    const SCROLL_THRESHOLD = 5; // pixels
+    if (Math.abs(entryMenuRef.current.scrollHeight - entryMenuRef.current.scrollTop) - entryMenuRef.current.clientHeight <= SCROLL_THRESHOLD) {
+      if (areDocumentsLeft) {
+        set_fetch_count();
+      }
+    }
+    return;
+  }, [areDocumentsLeft]);
+    
+  useEffect(() => {
+    entryMenuRef.current?.addEventListener("scroll", on_scroll);
+
+    return () => {
+      entryMenuRef.current?.removeEventListener("scroll", on_scroll);
+    }
+  });
 
   return (
     <>
