@@ -5,15 +5,20 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAppState } from "@/hooks/useAppState";
 import { get_entry, write_entry } from "@/lib/firebase/db";
 
 import { Button } from "../ui/button";
 
 import { db_date_to_date, date_to_db_date, logout_google  } from "@/lib/utils";
 
+import ProtectedRoute from "../providers/protected_route";
+
 export default function JournalPage() {
-  const {authenticated, user, loading, check_auth_client} = useAuth();  
+
+  const user = useAppState((state) => state.user);
+  const authenticated = useAppState((state) => state.authenticated);
+  // const {authenticated, user, loading, check_auth_client} = useAuth();  
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
@@ -56,20 +61,11 @@ export default function JournalPage() {
     load_data();
   }, [load_data]);
 
-  
-  check_auth_client();
-
-  // probably add provider component called protected route or something
-  // do checks there instead of here
-  if (loading) return <h1>Loading</h1>
-  if (!authenticated) return null;
-  if (!user) return null;
-
-  async function save_without_delay() {
+    async function save_without_delay() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
-    if (!!user) {
+    if (!!user && authenticated) {
       await write_entry(user.uid, dbDate, entry);
     }
 
@@ -81,7 +77,7 @@ export default function JournalPage() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
-    if (!!user) {
+    if (!!user && authenticated) {
       await write_entry(user.uid, dbDate, entry);
     }
 
@@ -112,34 +108,37 @@ export default function JournalPage() {
     return;
   }
 
+
   return (
     <>
-      <div className="min-h-screen flex flex-col justify-center items-center">
-        <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-          <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
-        </div>
+      <ProtectedRoute>
+        <div className="min-h-screen flex flex-col justify-center items-center">
+          <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
+            <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
+          </div>
 
-        {/* menubar */}
-        <div className="flex w-full justify-center">
-          <div className="flex w-full lg:w-3/4 justify-between">
-            <h1 className="font-bold text-2xl">RAMBLE</h1>
-            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={logout_google}/>
+          {/* menubar */}
+          <div className="flex w-full justify-center">
+            <div className="flex w-full lg:w-3/4 justify-between">
+              <h1 className="font-bold text-2xl">RAMBLE</h1>
+              <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={logout_google}/>
+            </div>
           </div>
-        </div>
-        {/* journal form */}
-        <div className="w-full lg:w-3/5">
-          <div className="flex justify-between pb-2">
-            <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
-            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
-          </div>
-          <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                    disabled={loadingData || readOnly || !pendingSave} 
-                    placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
-                    className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
-                    value={content}
-                    ref={textareaRef}/>  
-        </div>    
-      </div> 
+          {/* journal form */}
+          <div className="w-full lg:w-3/5">
+            <div className="flex justify-between pb-2">
+              <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
+              <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+            </div>
+            <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
+                      disabled={loadingData || readOnly || !pendingSave} 
+                      placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
+                      className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
+                      value={content}
+                      ref={textareaRef}/>  
+          </div>    
+        </div> 
+      </ProtectedRoute>
     </>
   )
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 
 interface EntriesPageProps {
-  user: User;
+  user: User | null;
   dbDate: string;
   fetchCount: number;
   set_fetch_count: () => void;
@@ -68,12 +68,15 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     };
   });
 
+  if (!user) return null;
+
   const fetched = useEntries(user.uid, dbDate, fetchCount);
    
   if (!fetched) return null
   const data = fetched.data;
   const entries: JournalEntry[] | undefined = data?.entries;
   const areDocumentsLeft = data?.areDocumentsLeft;
+
 
   const on_scroll = useCallback(() => {
     if (!entryMenuRef.current) return;
