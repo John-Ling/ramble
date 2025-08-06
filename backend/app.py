@@ -17,15 +17,20 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 SECRET = os.getenv("AUTH_SECRET") # Same as NEXTAUTH_SECRET. Used for decrypting JWT
 ALGORITHM=os.getenv("AUTH_ALGORITHM")
+REDIS_URI = os.getenv("REDIS_URI")
+REDIS_PORT = os.getenv("REDIS_PORT")
+if REDIS_PORT is not None:
+    REDIS_PORT = int(REDIS_PORT)
+else:
+    REDIS_PORT = 8002
 
 db = None
 accessTokens: redis.Redis | None = None # startup redis using docker
 oauth2Scheme = OAuth2PasswordBearer(tokenUrl="token")
 bearerScheme = HTTPBearer()
 
-
 userCollection: AsyncIOMotorCollection | None = None
-entryCollection: AsyncIOMotorCollection| None = None
+entryCollection: AsyncIOMotorCollection | None = None
 collection:  AsyncIOMotorCollection | None = None
 
 @asynccontextmanager
@@ -35,7 +40,7 @@ async def lifespan(app: FastAPI):
     try:
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
-        accessTokens = redis.Redis(decode_responses=True)
+        accessTokens = redis.Redis(host="172.17.0.1", port=8002, decode_responses=True)
         db = client["prod"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")

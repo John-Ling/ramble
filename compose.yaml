@@ -1,3 +1,5 @@
 services:
   redis:
     image: "redis:alpine"
+    ports: 
+      - "8002:6379"
