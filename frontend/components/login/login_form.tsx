@@ -1,31 +1,27 @@
 "use client";
 import { Button } from "../ui/button";
 import { google_sign_in, google_sign_out } from "@/lib/firebase/auth";
-import { redirect } from "next/navigation";
 import { useRouter } from "next/navigation";
-
-import { useAppState } from "@/hooks/useAppState";
-import { UserCredential } from "firebase/auth";
+import { signIn } from "next-auth/react";
+import { signOut } from "next-auth/react";
 
 export default function LoginForm() {
-  const login = useAppState((state) => state.signIn);
   const router = useRouter();
-  async function onLogin() {
-    const credential: UserCredential = await google_sign_in();
-    login(credential.user);
-    console.log("Redirecting");
+
+  const on_login = async () => {
+    signIn("google");
     router.push("/journal");
   }
 
-  async function onLogout() {
-    await google_sign_out();
+  const on_logout = async () => {
+    signOut();
   }
 
   return (
     <>
       <div className="flex justify-evenly">
-        <Button variant="secondary" onClick={onLogin}>Login</Button>
-        <Button variant="secondary" onClick={onLogout}>Logout</Button>
+        <Button variant="secondary" onClick={on_login}>Login</Button>
+        <Button variant="secondary" onClick={on_logout}>Logout</Button>
       </div>
     </>
   )

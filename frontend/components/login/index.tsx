@@ -1,7 +1,23 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import LoginForm from "./login_form"
+import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+
 export default function LoginPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status !== "loading" && session) {
+      router.push("/journal");
+    }
+  }, [status, session])
+
+  if (status === "loading") {
+    return <p>Loading...</p>
+  }
 
   return (
     <>

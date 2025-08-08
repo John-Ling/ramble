@@ -1,23 +1,29 @@
 "use client";
 
-import { Textarea } from "../ui/textarea";
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
-
 import { useAppState } from "@/hooks/useAppState";
 import { get_entry, write_entry } from "@/lib/firebase/db";
-
-import { Button } from "../ui/button";
-
 import { db_date_to_date, date_to_db_date, logout_google  } from "@/lib/utils";
 
+import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
+
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+
 import ProtectedRoute from "../providers/protected_route";
+import { useRouter } from "next/navigation";
+
+
 
 export default function JournalPage() {
+  
 
-  const user = useAppState((state) => state.user);
-  const authenticated = useAppState((state) => state.authenticated);
+  // check_auth_client();
+
   // const {authenticated, user, loading, check_auth_client} = useAuth();  
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
@@ -44,30 +50,30 @@ export default function JournalPage() {
     })
   });
 
-  const load_data = useCallback(() => {
-    // load data
-    if (!!user) {
-      get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
-        if (!!entry) {
-          setContent(entry.content);
-          setSaved(entry.content);
-        }
-        setLoadingData(false);
-      });  
-    }
-  }, [user]);
+  // const load_data = useCallback(() => {
+  //   // load data
+  //   if (user) {
+  //     get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
+  //       if (entry) {
+  //         setContent(entry.content);
+  //         setSaved(entry.content);
+  //       }
+  //       setLoadingData(false);
+  //     });  
+  //   }
+  // }, [user]);
 
-  useEffect(() => {
-    load_data();
-  }, [load_data]);
+  // useEffect(() => {
+  //   load_data();
+  // }, [load_data]);
 
     async function save_without_delay() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
-    if (!!user && authenticated) {
-      await write_entry(user.uid, dbDate, entry);
-    }
+    // if (user && authenticated) {
+    //   await write_entry(user.uid, dbDate, entry);
+    // }
 
     setPendingSave(true);
     textareaRef.current?.focus();
@@ -77,9 +83,9 @@ export default function JournalPage() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
-    if (!!user && authenticated) {
-      await write_entry(user.uid, dbDate, entry);
-    }
+    // if (user && authenticated) {
+    //   await write_entry(user.uid, dbDate, entry);
+    // }
 
     setTimeout(() => {
       setPendingSave(true);
@@ -114,14 +120,14 @@ export default function JournalPage() {
       <ProtectedRoute>
         <div className="min-h-screen flex flex-col justify-center items-center">
           <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-            <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
+            {/* <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> */}
           </div>
 
           {/* menubar */}
           <div className="flex w-full justify-center">
             <div className="flex w-full lg:w-3/4 justify-between">
               <h1 className="font-bold text-2xl">RAMBLE</h1>
-              <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={logout_google}/>
+              <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={signOut}/>
             </div>
           </div>
           {/* journal form */}
