@@ -10,7 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status !== "loading" && session) {
+    if (status === "authenticated" && session) {
       router.push("/journal");
     }
   }, [status, session])

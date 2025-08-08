@@ -13,7 +13,7 @@ export default function LoginForm() {
   }
 
   const on_logout = async () => {
-    signOut();
+    await signOut();
   }
 
   return (

@@ -4,7 +4,7 @@ export async function GET(request: NextRequest) {
 
 }
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
     const body = await req.json();
     const sub = body["sub"]
     const accessToken = body["token"]

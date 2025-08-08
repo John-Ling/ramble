@@ -21,7 +21,6 @@ export const config: AuthOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
-            console.log("JWT callback");
             if (account && user) {
               token.id = user.id;
               if (account.access_token === undefined) {
@@ -38,7 +37,7 @@ export const config: AuthOptions = {
                 method: "POST",
                 body: JSON.stringify({
                   "sub": user.id,
-                  "token": account.access_token !== undefined ? account.access_token : "asdfasdf"
+                  "token": account.access_token
                 }) 
               });
             }

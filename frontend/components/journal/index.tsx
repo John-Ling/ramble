@@ -10,18 +10,18 @@ import { db_date_to_date, date_to_db_date, logout_google  } from "@/lib/utils";
 
 import { signOut, useSession } from "next-auth/react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUser } from "@/hooks/useUser";
 
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
 import ProtectedRoute from "../providers/protected_route";
-import { useRouter } from "next/navigation";
+
 
 
 
 export default function JournalPage() {
-  
-
+  const user = useUser();
   // check_auth_client();
 
   // const {authenticated, user, loading, check_auth_client} = useAuth();  
@@ -36,7 +36,7 @@ export default function JournalPage() {
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [fetchCount, setFetchCount] = useState<number>(12);
-  const originalDbDate = date_to_db_date(currentDate);
+  const todayDbDate = date_to_db_date(currentDate);
 
   // users can only read old entries not make edits to them
   const readOnly = db_date_to_date(currentDate) === dbDate;
@@ -63,14 +63,30 @@ export default function JournalPage() {
   //   }
   // }, [user]);
 
-  // useEffect(() => {
-  //   load_data();
-  // }, [load_data]);
+  const load_data = useCallback(async () => {
+    if (!user) {
+      return;
+    }
+    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`).then(data => data.json());
+    if (response.status === 200) {
+      console.log("yippie");
+      console.log(response);
+      // set entry
+    }
 
-    async function save_without_delay() {
+    setLoadingData(false);
+  }, [user])
+
+  useEffect(() => {
+    load_data();
+  }, [load_data]);
+
+  async function save_without_delay() {
     setSaved(content);
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
+    
+
     // if (user && authenticated) {
     //   await write_entry(user.uid, dbDate, entry);
     // }

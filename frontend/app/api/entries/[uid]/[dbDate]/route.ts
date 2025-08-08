@@ -7,12 +7,12 @@ interface RouteParameters {
     params: Promise<{ uid: string, dbDate: string }>;
 }
 
-export async function GET(req: NextRequest, res: NextResponse, { params }: RouteParameters) {
+export async function GET(req: NextRequest, { params }: RouteParameters) {
     const { uid, dbDate } = await params;
     const token = await getToken({ req });
 
     if (!token) {
-        return Response.json({"detail": "Could find session"})
+        return Response.json({"detail": "Could not find session"}, {"status": 500})
     }
     
     console.log("TOKEN");
@@ -22,8 +22,8 @@ export async function GET(req: NextRequest, res: NextResponse, { params }: Route
             headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json"}
         });
         const data = await response.json();
-        return Response.json({"response": data});
+        return Response.json({"response": data}, {"status": response.status});
     } catch (err) {
-        return Response.json({"Error": (err as Error).message});
+        return Response.json({"Error": (err as Error).message}, {"status": 500});
     }
 }

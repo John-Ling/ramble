@@ -89,26 +89,6 @@ async def set_access_token(accessToken: AccessToken):
             status_code=status.HTTP_409_CONFLICT,
             detail="Token already exists"
         )
-        
-@app.post("/api/token/verify/")
-async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if ALGORITHM is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Algorithm is not set"
-        )
-    
-    token = credentials.credentials
-    print(token)
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"https://oauth2.googleapis.com/tokeninfo?access_token={token}")
-        print(response.json())
-
-@app.get("/api/tokens/")
-async def get_tokens():
-    print(accessTokens)
-    return {"message": accessTokens}
 
 @app.post("/api/users/createEntry/", status_code=status.HTTP_201_CREATED)
 async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...)):
@@ -264,8 +244,13 @@ async def get_entry(uid: str, dbDate: str, credentials: HTTPAuthorizationCredent
     accessToken = credentials.credentials
     print(accessToken)
 
-    # check if access token exists
-    if accessTokens.get(uid) == None or accessTokens.get(uid) != accessToken:
+    if accessTokens.get(uid) == None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User does not exist"
+        )
+    
+    if accessTokens.get(uid) != accessToken:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="You are not authorised"
