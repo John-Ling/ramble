@@ -21,17 +21,24 @@ export const config: AuthOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
-            if (user) {
-              token.id = user.id;   
-            }
+            console.log("JWT callback");
+            if (account && user) {
+              token.id = user.id;
+              if (account.access_token === undefined) {
+                return token;
+              }
 
-            if (account) {
-              console.log(account.userId)  
-              const response = await fetch("http://localhost:3000/api/auth.set-access-token/", {
+              token.accessToken = account.access_token;
+              // this may need to be reworked if access tokens are expired
+              // perhaps keep in redis the users id and the expiration time
+              // if the token is expired we can reset the value of the token
+              // effectively disabling write protection
+              // this is also another potential vulnerability to keep in mind
+              const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
                 method: "POST",
                 body: JSON.stringify({
-                  "sub": account.userId,
-                  "token": account.accessToken
+                  "sub": user.id,
+                  "token": account.access_token !== undefined ? account.access_token : "asdfasdf"
                 }) 
               });
             }
