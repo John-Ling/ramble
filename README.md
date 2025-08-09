@@ -10,7 +10,6 @@ npm run dev
 
 ### Setting Up Backend
 
-Backend uses uv so initialise
 Start middleware
 ```
 cd backend/
