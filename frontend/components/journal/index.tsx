@@ -84,7 +84,7 @@ export default function JournalPage() {
   async function save_without_delay() {
     setSaved(content);
     setPendingSave(false);
-    const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
+    // const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     
 
     // if (user && authenticated) {
@@ -98,7 +98,7 @@ export default function JournalPage() {
   async function save_with_delay() {
     setSaved(content);
     setPendingSave(false);
-    const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
+    // const entry: JournalEntry = { created: dbDate, content: content, favourite};
     // if (user && authenticated) {
     //   await write_entry(user.uid, dbDate, entry);
     // }

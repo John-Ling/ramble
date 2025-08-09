@@ -242,8 +242,6 @@ async def get_entry(uid: str, dbDate: str, credentials: HTTPAuthorizationCredent
         )
     
     accessToken = credentials.credentials
-    print(accessToken)
-
     if accessTokens.get(uid) == None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -285,11 +283,6 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Document does not exist"
         )
-    
-
-@app.get("/api/ping/", status_code=status.HTTP_200_OK)
-async def ping():
-    return {"Pong"}
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True )

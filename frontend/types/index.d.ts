@@ -1,6 +1,12 @@
 interface JournalEntry {
     created: string; // acts as id
+    authorID: string;
     content: string;
     favourite: boolean;
-    tags: string[]; // will implement later maybe idk
+}
+
+interface JournalEntryReference {
+    created: string;
+    name: string | null;
+    favourite: boolean;
 }
