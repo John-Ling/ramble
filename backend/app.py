@@ -1,4 +1,5 @@
 from fastapi import Body, Depends, FastAPI, HTTPException, Response, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import ASCENDING
@@ -9,6 +10,7 @@ import httpx
 import os
 import uvicorn
 import redis
+import json
 
 from _types import *
 
@@ -69,6 +71,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# probably refactor into a decorator
+async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    if accessTokens is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Redis is not running"
+        )
+    
+    accessToken = credentials.credentials
+    if accessTokens.get(uid) == None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User does not exist"
+        )
+    
+    if accessTokens.get(uid) != accessToken:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You are not authorised"
+        ) 
+    return
 
 @app.post("/api/auth/set-access-token/", status_code=status.HTTP_201_CREATED)
 async def set_access_token(accessToken: AccessToken):
@@ -90,8 +113,14 @@ async def set_access_token(accessToken: AccessToken):
             detail="Token already exists"
         )
 
-@app.post("/api/users/createEntry/", status_code=status.HTTP_201_CREATED)
-async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...)):
+@app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)
+async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    """
+    Takes the schema for a journal entry and creates both a reference and entry
+    The reference is inserted into the user's entries
+    The entry is inserted into the entries collection
+    """
+
     if userCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -99,6 +128,12 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
         )
     
     uid = entry.authorID
+    print(uid)
+    try:
+        await check_auth(uid, credentials)
+    except HTTPException as e:
+        raise e
+    
     user = await userCollection.find_one({"_id": uid})
     entryDict = entry.model_dump(by_alias=True)
 
@@ -125,10 +160,18 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
     # Insert actual entry into database
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"http://localhost:8000/api/entries/insertEntry/", json=entryDict)
+
+            print("Making call")
+            response = await client.post("http://localhost:8000/api/entries/insert-entry/", 
+                                        json=entryDict, 
+                                        headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
+        
+            print("Checking status")
             response.raise_for_status()
             return {"message": "Everything done :)"}
-        except httpx.HTTPError:
+        except httpx.HTTPError as e:
+            print("Rollback")
+            print(e)
             # Rollback transaction and remove entry reference
             if user is not None:
                 await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})
@@ -140,8 +183,14 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
                 detail="walao something go wrong undoing change"
             )
 
-@app.post("/api/entries/insertEntry/", status_code=status.HTTP_201_CREATED)
-async def insert_entry(response: Response, entry: dict = Body(...)):
+@app.post("/api/entries/insert-entry/", status_code=status.HTTP_201_CREATED)
+async def insert_entry(response: Response, entry: dict = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    """
+    Insert a journal entry into the entries collection
+    """
+    print("insert entry called ")
+    print(entry["authorID"])
+
     if entryCollection is None:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise httpx.HTTPError(
@@ -153,6 +202,11 @@ async def insert_entry(response: Response, entry: dict = Body(...)):
         raise httpx.HTTPError(
             message="Malformed request"
         )
+
+    print(entry["authorID"])
+    await check_auth(entry["authorID"], credentials)
+
+    print("Checking for entry")
 
     existingEntry = await entryCollection.find_one({"authorID": entry["authorID"], "created": entry["created"]})
     if existingEntry is not None:
@@ -228,46 +282,38 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         )
 
 @app.get("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
-async def get_entry(uid: str, dbDate: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    """
+    Returns a journal entry for a specific user and dbDate
+    Returns 200 if entry exists and 204 if it does not
+    """
+
     if entryCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Entry collection is Null"
         )
 
-    if accessTokens is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Redis is not running"
-        )
-    
-    accessToken = credentials.credentials
-    if accessTokens.get(uid) == None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User does not exist"
-        )
-    
-    if accessTokens.get(uid) != accessToken:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You are not authorised"
-        )
+    await check_auth(uid, credentials)
 
     entry = await entryCollection.find_one({"authorID": uid, "created": dbDate})
 
     if entry is not None:
-        return {"entry": entry}
-    return {"entry": None}
+        return JSONResponse(content=entry)
+
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return None
 
 
 @app.put("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
-async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body(...)):
+async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     if entryCollection is None or userCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Entry or User collection is Null"
         )
+
+    await check_auth(uid, credentials)
 
     writeEntry = {
         k: v for k, v in updated.model_dump(by_alias=True).items() if v is not None
@@ -280,7 +326,7 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         if updateResult is not None:
             return { "message": "yippie"}
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Document does not exist"
         )
 

@@ -22,9 +22,7 @@ import ProtectedRoute from "../providers/protected_route";
 
 export default function JournalPage() {
   const user = useUser();
-  // check_auth_client();
-
-  // const {authenticated, user, loading, check_auth_client} = useAuth();  
+  const { session, status, check_auth_client } = useAuth();
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
@@ -50,28 +48,20 @@ export default function JournalPage() {
     })
   });
 
-  // const load_data = useCallback(() => {
-  //   // load data
-  //   if (user) {
-  //     get_entry(user.uid, dbDate).then((entry: JournalEntry | null) => {
-  //       if (entry) {
-  //         setContent(entry.content);
-  //         setSaved(entry.content);
-  //       }
-  //       setLoadingData(false);
-  //     });  
-  //   }
-  // }, [user]);
 
   const load_data = useCallback(async () => {
-    if (!user) {
-      return;
-    }
-    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`).then(data => data.json());
+    if (!user) return;
+  
+    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`);
     if (response.status === 200) {
+      const entry: JournalEntry = await response.json() as JournalEntry;
       console.log("yippie");
-      console.log(response);
+      console.log(entry);
       // set entry
+      setContent(entry.content);
+      setSaved(entry.content);
+    } else {
+      console.log("Could not get entry");
     }
 
     setLoadingData(false);
@@ -82,10 +72,23 @@ export default function JournalPage() {
   }, [load_data]);
 
   async function save_without_delay() {
+    if (!user || user.id === undefined) return;
+
     setSaved(content);
     setPendingSave(false);
     // const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     
+    const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
+
+    if (status === "authenticated") {
+      const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json", "accept": "application/json"},
+        body: JSON.stringify(entry)
+      });
+    }
+    
+
 
     // if (user && authenticated) {
     //   await write_entry(user.uid, dbDate, entry);
@@ -96,9 +99,22 @@ export default function JournalPage() {
   }
 
   async function save_with_delay() {
+    if (!user || user.id === undefined) return;
+    
     setSaved(content);
     setPendingSave(false);
     // const entry: JournalEntry = { created: dbDate, content: content, favourite};
+
+    const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
+
+    if (status === "authenticated") {
+      const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json", "accept": "application/json"},
+        body: JSON.stringify(entry)
+      })
+    }
+    
     // if (user && authenticated) {
     //   await write_entry(user.uid, dbDate, entry);
     // }
@@ -130,6 +146,8 @@ export default function JournalPage() {
     return;
   }
 
+
+  check_auth_client();
 
   return (
     <>
