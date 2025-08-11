@@ -13,7 +13,7 @@ export default function LoginPage() {
     if (status === "authenticated" && session) {
       router.push("/journal");
     }
-  }, [status, session])
+  }, [status, session, router])
 
   if (status === "loading") {
     return <p>Loading...</p>

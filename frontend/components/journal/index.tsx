@@ -5,8 +5,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 import { useAppState } from "@/hooks/useAppState";
-import { get_entry, write_entry } from "@/lib/firebase/db";
-import { db_date_to_date, date_to_db_date, logout_google  } from "@/lib/utils";
+import { db_date_to_date, date_to_db_date } from "@/lib/utils";
 
 import { signOut, useSession } from "next-auth/react";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,10 +53,8 @@ export default function JournalPage() {
   
     const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`);
     if (response.status === 200) {
-      const entry: JournalEntry = await response.json() as JournalEntry;
-      console.log("yippie");
-      console.log(entry);
       // set entry
+      const entry: JournalEntry = await response.json() as JournalEntry;
       setContent(entry.content);
       setSaved(entry.content);
     } else {
@@ -87,24 +84,14 @@ export default function JournalPage() {
         body: JSON.stringify(entry)
       });
     }
-    
-
-
-    // if (user && authenticated) {
-    //   await write_entry(user.uid, dbDate, entry);
-    // }
-
     setPendingSave(true);
     textareaRef.current?.focus();
   }
 
   async function save_with_delay() {
     if (!user || user.id === undefined) return;
-    
     setSaved(content);
     setPendingSave(false);
-    // const entry: JournalEntry = { created: dbDate, content: content, favourite};
-
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
     if (status === "authenticated") {
@@ -114,10 +101,6 @@ export default function JournalPage() {
         body: JSON.stringify(entry)
       })
     }
-    
-    // if (user && authenticated) {
-    //   await write_entry(user.uid, dbDate, entry);
-    // }
 
     setTimeout(() => {
       setPendingSave(true);
@@ -145,16 +128,15 @@ export default function JournalPage() {
     textareaRef.current?.focus();
     return;
   }
-
-
   check_auth_client();
+
 
   return (
     <>
       <ProtectedRoute>
         <div className="min-h-screen flex flex-col justify-center items-center">
           <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-            {/* <EntriesPage user={user} dbDate={originalDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  /> */}
+            <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
           </div>
 
           {/* menubar */}

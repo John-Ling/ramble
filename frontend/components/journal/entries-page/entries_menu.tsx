@@ -1,13 +1,11 @@
 "use client";
-import { get_entries } from "@/lib/firebase/db";
-import { User } from "firebase/auth";
 import { useEffect, useRef, useState, useCallback } from "react"
 import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 
 interface EntriesPageProps {
-  user: User | null;
+  uid: string | undefined;
   dbDate: string;
   fetchCount: number;
   set_fetch_count: () => void;
@@ -15,7 +13,9 @@ interface EntriesPageProps {
   on_entry_select: (entry: JournalEntry) => void;
 }
 
-export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
+export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
+  if (uid === undefined) return null;
+
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const entryMenuRef = useRef<HTMLDivElement>(null);
 
@@ -68,15 +68,16 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
     };
   });
 
-  if (!user) return null;
 
-  const fetched = useEntries(user.uid, dbDate, fetchCount);
+  const fetched = useEntries(uid, dbDate, fetchCount);
    
   if (!fetched) return null
   const data = fetched.data;
-  const entries: JournalEntry[] | undefined = data?.entries;
-  const areDocumentsLeft = data?.areDocumentsLeft;
+  const entries: JournalEntryReference[] | undefined = data?.entries;
 
+  console.log("References");
+  console.log(entries);
+  const areDocumentsLeft = data?.areDocumentsLeft;
 
   const on_scroll = useCallback(() => {
     if (!entryMenuRef.current) return;
@@ -109,12 +110,12 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
           { fetched.isLoading ? <p>Loading...</p> : 
           <div className="flex justify-center items-center">
             <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
-              {entries?.map((entry: JournalEntry, i: number) => {
+              {entries?.map((entry: any, i: number) => {
                 return (
                   <div key={i} onClick={() => alert("Clicked")}  className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
                     <FileText size={48} />
                     <p className="text-sm">
-                      {entry.created}
+                      {entry._id}
                     </p>
                   </div>
                 )
@@ -127,11 +128,15 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
   )
 }
 
-function useEntries(userID: string, dbDate: string, fetchCount: number) {
-  const { data, error, isLoading } = useSWR([userID, dbDate, fetchCount], ([userID, dbDate, fetchCount]) => get_entries(userID, dbDate, fetchCount), {
+function useEntries(uid: string, dbDate: string, fetchCount: number) {
+  const fetcher = (url: string) => fetch(url).then(r => r.json());
+  const { data, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/${fetchCount}`, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });
+
+  console.log("RESULT");
+  console.log(data);
 
   return { data: data, error, isLoading };
 }

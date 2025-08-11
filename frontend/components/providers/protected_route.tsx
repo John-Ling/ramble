@@ -4,7 +4,7 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { session, status, check_auth_client } = useAuth();
+  const { status, check_auth_client } = useAuth();
 
   check_auth_client();
 

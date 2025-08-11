@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
         method: "POST",
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({
-            _id: dbDate,
+            _id: uid + dbDate,
             authorID: uid,
             created: dbDate,
             content: entry.content

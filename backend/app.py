@@ -73,6 +73,9 @@ app.add_middleware(
 
 # probably refactor into a decorator
 async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+
+    
+
     if accessTokens is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -80,6 +83,9 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
         )
     
     accessToken = credentials.credentials
+
+    print(f"Access token {accessToken}")
+    print(f"DB {accessTokens.get(uid)}")
     if accessTokens.get(uid) == None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -104,14 +110,11 @@ async def set_access_token(accessToken: AccessToken):
     sub = accessToken.sub 
     token = accessToken.token
 
+    
+    # Add check for secret since this allows for arbitrary writes
     if accessTokens.get(sub) == None:
         accessTokens.set(sub, token)
         return {"message": "Added token"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Token already exists"
-        )
 
 @app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)
 async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
@@ -217,8 +220,57 @@ async def insert_entry(response: Response, entry: dict = Body(...), credentials:
 
     await entryCollection.insert_one(entry)
     return { "message": "Wrote document" }
-    
-@app.get("/api/entries/{uid}/", status_code=status.HTTP_200_OK)
+
+
+
+async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
+    pipeline = [
+        {"$match": {"_id": uid}},
+        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+        {
+            # Convert entries created attribute into valid dates for comparisons
+            "$addFields": {
+                "entries._dateCreated": {
+                    "$dateFromString": { "dateString": "$entries._id" }
+                }
+            }
+        },
+        {"$sort": {"entries._dateCreated": 1}},    
+        {
+            "$addFields": {
+                "entries._beforeTarget": {
+                    "$lt": ["$entries._dateCreated", {
+                        "$dateFromString": { "dateString": dbDate }
+                    }]
+                }
+            }
+        },
+        {
+            "$match": {
+                "entries._beforeTarget": True
+            }
+        },
+        {"$sort": {"entries._dateCreated": -1}},
+        {"$limit": fetchCount + 1},  
+        {
+            "$group": {
+                "_id": "$_id",
+                "entries": {"$push": "$entries"},
+                "entryCount": {"$sum": 1}
+            }
+        } 
+    ]
+
+    if userCollection is None:
+        return (None, None)
+
+    result = await userCollection.aggregate(pipeline).to_list(1)
+    if not result:
+        return (None, None)
+
+    return ( result[0].get("entries", [JournalEntryReference]), result[0].get("entryCount", int) )
+
+@app.get("/api/entries/{uid}/{dbDate}/{fetchCount}/", status_code=status.HTTP_200_OK)
 async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
     if userCollection is None:
         raise HTTPException(
@@ -226,55 +278,32 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             detail="User collection is Null"
         )
 
-    try:       
-        pipeline = [
-            {"$match": {"_id": uid}},
-            {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-            {
-                # Convert entries created attribute into valid dates for comparisons
-                "$addFields": {
-                    "entries._dateCreated": {
-                        "$dateFromString": { "dateString": "$entries._id" }
-                    }
-                }
-            },
-            {"$sort": {"entries._dateCreated": 1}},    
-            {
-                "$addFields": {
-                    "entries._beforeTarget": {
-                        "$lt": ["$entries._dateCreated", {
-                            "$dateFromString": { "dateString": dbDate }
-                        }]
-                    }
-                }
-            },
-            {
-                "$match": {
-                    "entries._beforeTarget": True
-                }
-            },
-            {"$sort": {"entries._dateCreated": -1}},
-            {"$limit": fetchCount + 1},  
-            {
-                "$group": {
-                    "_id": "$_id",
-                    "entries": {"$push": "$entries"},
-                    "entryCount": {"$sum": 1}
-                }
-            } 
-        ]
+    try:
+        (entries, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
 
-        result = await userCollection.aggregate(pipeline).to_list(1)
-        if not result:
+        if not entries or not count:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="User does not exist or no entries found"
             )
 
-        entries = result[0].get("entries", [])        
-        finalEntry = entries.pop()
-        count = result[0].get("entryCount", int)
-        return {"entries": entries, "finalEntry": finalEntry, "entryCount": max(0, count - 1)}
+        finalEntry: JournalEntryReference | None = None
+        areDocumentsLeft = True
+
+        if (count != fetchCount + 1):
+            # If less than fetchCount documents have been pulled then we have run out
+            areDocumentsLeft = False
+        else: 
+            # remove final entry and keep track of it 
+            finalEntry = entries.pop()
+            if finalEntry and finalEntry.created:
+                (entriesLeft, _) = await get_entries_before(uid, finalEntry.created, fetchCount=1)
+                if entriesLeft:
+                    areDocumentsLeft = True
+        
+        return {"entries": entries, "finalEntry": finalEntry, "entryCount": max(0, count - 1), "areDocumentsLeft": areDocumentsLeft}
+    
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -297,7 +326,6 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
     await check_auth(uid, credentials)
 
     entry = await entryCollection.find_one({"authorID": uid, "created": dbDate})
-
     if entry is not None:
         return JSONResponse(content=entry)
 

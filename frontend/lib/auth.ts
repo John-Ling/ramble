@@ -8,15 +8,6 @@ import { getServerSession } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import Google from "next-auth/providers/google";
 
-
-const GOOGLE_AUTHORIZATION_URL =
-    "https://accounts.google.com/o/oauth2/v2/auth?" +
-    new URLSearchParams({
-        prompt: "consent",
-        access_type: "offline",
-        response_type: "code",
-    })
-
 async function refresh_access_token(token: JWT) {
     if (process.env.GOOGLE_CLIENT_ID === undefined || process.env.GOOGLE_CLIENT_SECRET === undefined)  return;
     if (token.refreshToken === undefined || !token)  return;
@@ -128,7 +119,7 @@ export const config: AuthOptions = {
 
 
             console.log("Refreshing token");
-            let ret =  await refresh_access_token(token);
+            const ret =  await refresh_access_token(token);
             if (ret !== undefined) {
                 return ret;
             } else {
