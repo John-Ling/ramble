@@ -75,8 +75,6 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   const data = fetched.data;
   const entries: JournalEntryReference[] | undefined = data?.entries;
 
-  console.log("References");
-  console.log(entries);
   const areDocumentsLeft = data?.areDocumentsLeft;
 
   const on_scroll = useCallback(() => {
@@ -134,9 +132,6 @@ function useEntries(uid: string, dbDate: string, fetchCount: number) {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });
-
-  console.log("RESULT");
-  console.log(data);
 
   return { data: data, error, isLoading };
 }

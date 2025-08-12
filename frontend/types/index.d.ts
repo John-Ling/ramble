@@ -5,7 +5,7 @@ interface JournalEntry {
 }
 
 interface JournalEntryReference {
-    created: string;
+    _id: string; 
     name: string | null;
     favourite: boolean;
 }

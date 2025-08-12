@@ -50,8 +50,9 @@ export default function JournalPage() {
 
   const load_data = useCallback(async () => {
     if (!user) return;
-  
-    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`);
+    
+    setLoadingData(true);
+    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`);
     if (response.status === 200) {
       // set entry
       const entry: JournalEntry = await response.json() as JournalEntry;
@@ -62,7 +63,7 @@ export default function JournalPage() {
     }
 
     setLoadingData(false);
-  }, [user])
+  }, [user, dbDate])
 
   useEffect(() => {
     load_data();
@@ -118,9 +119,8 @@ export default function JournalPage() {
     return;
   }
 
-  const load_entry = (entry: JournalEntry) => {
-    setDbDate(entry.created);
-    setContent(entry.content);
+  const load_entry = (entry: JournalEntryReference) => {
+    setDbDate(entry._id);
   }
 
   const on_entry_menu_close = () => {
