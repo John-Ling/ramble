@@ -14,12 +14,16 @@ export async function POST(req: NextRequest) {
     console.log("Sending request");
 
 
-    // secure this route to prevent malicious users from setting their own access tokens
-    // thereby giving themselves authorisation
+    if (!process.env.ADMIN_SECRET) {
+        return new Response("Auth secret can't be found", {status: 500});
+
+    }
+
     const response = await fetch("http://localhost:8000/api/auth/set-access-token/", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.ADMIN_SECRET}`
         },
         body: JSON.stringify(body)
     });

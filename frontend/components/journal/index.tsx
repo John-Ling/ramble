@@ -4,11 +4,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
-import { useAppState } from "@/hooks/useAppState";
 import { db_date_to_date, date_to_db_date } from "@/lib/utils";
 
-import { signOut, useSession } from "next-auth/react";
-import { useAuth } from "@/hooks/useAuth";
+import { signOut } from "next-auth/react";
 import { useUser } from "@/hooks/useUser";
 
 import { Button } from "../ui/button";
@@ -16,12 +14,8 @@ import { Textarea } from "../ui/textarea";
 
 import ProtectedRoute from "../providers/protected_route";
 
-
-
-
 export default function JournalPage() {
   const user = useUser();
-  const { session, status, check_auth_client } = useAuth();
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
@@ -78,13 +72,11 @@ export default function JournalPage() {
     
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
-    if (status === "authenticated") {
-      const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json", "accept": "application/json"},
-        body: JSON.stringify(entry)
-      });
-    }
+    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json", "accept": "application/json"},
+      body: JSON.stringify(entry)
+    });
     setPendingSave(true);
     textareaRef.current?.focus();
   }
@@ -95,14 +87,11 @@ export default function JournalPage() {
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
-    if (status === "authenticated") {
-      const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
-        method: "PUT",
-        headers: {"Content-Type": "application/json", "accept": "application/json"},
-        body: JSON.stringify(entry)
-      })
-    }
-
+    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json", "accept": "application/json"},
+      body: JSON.stringify(entry)
+    })
     setTimeout(() => {
       setPendingSave(true);
       textareaRef.current?.focus();
@@ -128,39 +117,35 @@ export default function JournalPage() {
     textareaRef.current?.focus();
     return;
   }
-  check_auth_client();
-
 
   return (
-    <>
-      <ProtectedRoute>
-        <div className="min-h-screen flex flex-col justify-center items-center">
-          <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-            <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
-          </div>
+    <ProtectedRoute>
+      <div className="min-h-screen flex flex-col justify-center items-center">
+        <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
+          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
+        </div>
 
-          {/* menubar */}
-          <div className="flex w-full justify-center">
-            <div className="flex w-full lg:w-3/4 justify-between">
-              <h1 className="font-bold text-2xl">RAMBLE</h1>
-              <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={signOut}/>
-            </div>
+        {/* menubar */}
+        <div className="flex w-full justify-center">
+          <div className="flex w-full lg:w-3/4 justify-between">
+            <h1 className="font-bold text-2xl">RAMBLE</h1>
+            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={signOut}/>
           </div>
-          {/* journal form */}
-          <div className="w-full lg:w-3/5">
-            <div className="flex justify-between pb-2">
-              <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
-              <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
-            </div>
-            <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                      disabled={loadingData || readOnly || !pendingSave} 
-                      placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
-                      className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
-                      value={content}
-                      ref={textareaRef}/>  
-          </div>    
-        </div> 
-      </ProtectedRoute>
-    </>
+        </div>
+        {/* journal form */}
+        <div className="w-full lg:w-3/5">
+          <div className="flex justify-between pb-2">
+            <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
+            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+          </div>
+          <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
+                    disabled={loadingData || readOnly || !pendingSave} 
+                    placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
+                    className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
+                    value={content}
+                    ref={textareaRef}/>  
+        </div>    
+      </div> 
+    </ProtectedRoute>
   )
 }

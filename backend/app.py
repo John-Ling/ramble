@@ -11,6 +11,7 @@ import os
 import uvicorn
 import redis
 import json
+import logging
 
 from _types import *
 
@@ -30,6 +31,8 @@ db = None
 accessTokens: redis.Redis | None = None # startup redis using docker
 oauth2Scheme = OAuth2PasswordBearer(tokenUrl="token")
 bearerScheme = HTTPBearer()
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 userCollection: AsyncIOMotorCollection | None = None
 entryCollection: AsyncIOMotorCollection | None = None
@@ -65,7 +68,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,9 +76,6 @@ app.add_middleware(
 
 # probably refactor into a decorator
 async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-
-    
-
     if accessTokens is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -83,9 +83,9 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
         )
     
     accessToken = credentials.credentials
+    # logger.info(accessToken)
+    # logger.info(accessTokens.get(uid))
 
-    print(f"Access token {accessToken}")
-    print(f"DB {accessTokens.get(uid)}")
     if accessTokens.get(uid) == None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -100,7 +100,7 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
     return
 
 @app.post("/api/auth/set-access-token/", status_code=status.HTTP_201_CREATED)
-async def set_access_token(accessToken: AccessToken):
+async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     if accessTokens is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -110,11 +110,17 @@ async def set_access_token(accessToken: AccessToken):
     sub = accessToken.sub 
     token = accessToken.token
 
-    
-    # Add check for secret since this allows for arbitrary writes
-    if accessTokens.get(sub) == None:
-        accessTokens.set(sub, token)
-        return {"message": "Added token"}
+    adminSecret = credentials.credentials
+    if adminSecret != os.getenv("ADMIN_SECRET"):
+        logger.info("Attempt to set access token denied")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nice try dumbass"
+        )
+
+    logger.info("Setting access token")
+    accessTokens.set(sub, token)
+    return {"message": "Added token"}
 
 @app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)
 async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
@@ -131,7 +137,6 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
         )
     
     uid = entry.authorID
-    print(uid)
     try:
         await check_auth(uid, credentials)
     except HTTPException as e:
@@ -191,9 +196,6 @@ async def insert_entry(response: Response, entry: dict = Body(...), credentials:
     """
     Insert a journal entry into the entries collection
     """
-    print("insert entry called ")
-    print(entry["authorID"])
-
     if entryCollection is None:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise httpx.HTTPError(
@@ -206,10 +208,7 @@ async def insert_entry(response: Response, entry: dict = Body(...), credentials:
             message="Malformed request"
         )
 
-    print(entry["authorID"])
     await check_auth(entry["authorID"], credentials)
-
-    print("Checking for entry")
 
     existingEntry = await entryCollection.find_one({"authorID": entry["authorID"], "created": entry["created"]})
     if existingEntry is not None:
