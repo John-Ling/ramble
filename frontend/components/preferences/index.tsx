@@ -1,13 +1,16 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import ProtectedRoute from "../providers/protected_route";
 
 export default function PreferencesPage() {
-  const {authenticated, user, loading, check_auth_client} = useAuth();  
-
-  check_auth_client();
-
-  if (loading) return <h1>Loading</h1>
-  if (!authenticated) return null;
-  if (!user) return null;
+  return (
+    <ProtectedRoute>
+      <div className="p-5">
+        <div className="left-32 h-[96vh] max-w-[20vw] flex bg-[#141414]">
+          <h1>Hello</h1>
+        </div>
+      </div>
+      
+    </ProtectedRoute>
+  )
 }

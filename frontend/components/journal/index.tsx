@@ -13,8 +13,10 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 
 import ProtectedRoute from "../providers/protected_route";
+import { useRouter } from "next/navigation";
 
 export default function JournalPage() {
+  const router = useRouter();
   const user = useUser();
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
@@ -30,7 +32,7 @@ export default function JournalPage() {
   const todayDbDate = date_to_db_date(currentDate);
 
   // users can only read old entries not make edits to them
-  const readOnly = db_date_to_date(currentDate) === dbDate;
+  const readOnly = dbDate !== todayDbDate;
 
   useEffect(() => {
     // autosave at fixed intervals
@@ -40,7 +42,6 @@ export default function JournalPage() {
       clearInterval(interval);
     })
   });
-
 
   const load_data = useCallback(async () => {
     if (!user) return;
@@ -118,10 +119,22 @@ export default function JournalPage() {
     return;
   }
 
+  const on_pref = () => {
+    router.push("/preferences");
+    return;
+  }
+
+  const on_entry = () => {
+    setEntriesVisible(true);
+    return;
+  }
+
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        { entriesVisible ? <div className={`fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
+        { entriesVisible ? 
+        <div className={`fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
           <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry} />
         </div> : null
         }
@@ -130,7 +143,10 @@ export default function JournalPage() {
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">
             <h1 className="font-bold text-2xl">RAMBLE</h1>
-            <SettingsMenu disabled={entriesVisible} onEntries={() => setEntriesVisible(true)} onLogout={signOut}/>
+            <SettingsMenu disabled={entriesVisible} 
+                          onEntries={on_entry} 
+                          onPrefs={on_pref}
+                          onLogout={signOut}/>
           </div>
         </div>
         {/* journal form */}
@@ -140,7 +156,7 @@ export default function JournalPage() {
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                    disabled={loadingData || readOnly || !pendingSave} 
+                    disabled={loadingData || readOnly} 
                     placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
                     className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
