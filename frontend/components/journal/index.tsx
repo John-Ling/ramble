@@ -34,7 +34,7 @@ export default function JournalPage() {
 
   useEffect(() => {
     // autosave at fixed intervals
-    const AUTOSAVE_INTERVAL = 2000;
+    const AUTOSAVE_INTERVAL = 1500;
     const interval = setInterval(autosave, AUTOSAVE_INTERVAL);
     return (() => {
       clearInterval(interval);
@@ -68,7 +68,6 @@ export default function JournalPage() {
 
     setSaved(content);
     setPendingSave(false);
-    // const entry: JournalEntry = { created: dbDate, content: content, favourite: false, tags: [] };
     
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
@@ -109,6 +108,7 @@ export default function JournalPage() {
   }
 
   const load_entry = (entry: JournalEntryReference) => {
+    console.log(entry);
     setDbDate(entry._id);
   }
 
@@ -121,10 +121,11 @@ export default function JournalPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex flex-col justify-center items-center">
-        <div className={`${entriesVisible ? "block" : "hidden"} fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry}  />
-        </div>
-
+        { entriesVisible ? <div className={`fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
+          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry} />
+        </div> : null
+        }
+      
         {/* menubar */}
         <div className="flex w-full justify-center">
           <div className="flex w-full lg:w-3/4 justify-between">

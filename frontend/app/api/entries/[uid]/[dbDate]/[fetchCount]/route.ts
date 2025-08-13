@@ -18,6 +18,8 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     });
     if (response.ok) {
         const data = await response.json();
+        data.entries[0]._id = data.entries[0].created;
+
         return Response.json(data, {"status": 200});
     }
 

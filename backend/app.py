@@ -278,14 +278,29 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         )
 
     try:
-        (entries, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
+        firstEntry = await _get_entry(uid, dbDate)
+        if firstEntry is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error"
+            )
+        
+        entries = [firstEntry]
+        logger.info(firstEntry)
+    
+        (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
 
-        if not entries or not count:
+        if not entriesBefore or not count:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="User does not exist or no entries found"
             )
 
+        for entry in entriesBefore:
+            entries.append(entry)
+        
+        # Add 1 extra to count for first entry
+        count = count + 1
         finalEntry: JournalEntryReference | None = None
         areDocumentsLeft = True
 
@@ -309,6 +324,16 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             detail=f"Error: {e}"
         )
 
+async def _get_entry(uid: str, dbDate: str):
+    if entryCollection is None:
+        return None
+
+    entry = await entryCollection.find_one({"authorID": uid, "created": dbDate})
+    if entry is not None:
+        return entry
+
+    return None
+
 @app.get("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
 async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
@@ -322,9 +347,10 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
             detail="Entry collection is Null"
         )
 
+
     await check_auth(uid, credentials)
 
-    entry = await entryCollection.find_one({"authorID": uid, "created": dbDate})
+    entry = await _get_entry(uid, dbDate)
     if entry is not None:
         return JSONResponse(content=entry)
 

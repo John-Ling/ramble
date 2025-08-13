@@ -10,7 +10,7 @@ interface EntriesPageProps {
   fetchCount: number;
   set_fetch_count: () => void;
   on_close: () => void;
-  on_entry_select: (entry: JournalEntry) => void;
+  on_entry_select: (entry: JournalEntryReference) => void;
 }
 
 export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
@@ -51,7 +51,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
           break;
         case "Enter":
           event.preventDefault();
-          const entry: JournalEntry | undefined = data?.entries[activeIndex];
+          const entry: JournalEntryReference | undefined = data?.entries[activeIndex];
           if (!!entry) {
             on_entry_select(entry);
           }
@@ -108,7 +108,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
           { fetched.isLoading ? <p>Loading...</p> : 
           <div className="flex justify-center items-center">
             <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
-              {entries?.map((entry: any, i: number) => {
+              {entries?.map((entry: JournalEntryReference, i: number) => {
                 return (
                   <div key={i} onClick={() => alert("Clicked")}  className={`flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
                     <FileText size={48} />
