@@ -83,8 +83,8 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
         )
     
     accessToken = credentials.credentials
-    # logger.info(accessToken)
-    # logger.info(accessTokens.get(uid))
+    logger.info(accessToken)
+    logger.info(accessTokens.get(uid))
 
     if accessTokens.get(uid) == None:
         raise HTTPException(
@@ -109,6 +109,7 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
     
     sub = accessToken.sub 
     token = accessToken.token
+    
 
     adminSecret = credentials.credentials
     if adminSecret != os.getenv("ADMIN_SECRET"):
@@ -119,7 +120,11 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
         )
 
     logger.info("Setting access token")
+    prev = accessTokens.get(sub)
     accessTokens.set(sub, token)
+
+    logger.info(f"Changed access token {prev} for UID {sub} to {accessTokens.get(sub)}")
+
     return {"message": "Added token"}
 
 @app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)

@@ -6,14 +6,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
     const body = await req.json();
-    const sub = body["sub"]
-    const accessToken = body["token"]
-
-    console.log(body);
-
-    console.log("Sending request");
-
-
     if (!process.env.ADMIN_SECRET) {
         return new Response("Auth secret can't be found", {status: 500});
 
