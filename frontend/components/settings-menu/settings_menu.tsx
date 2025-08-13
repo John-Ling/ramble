@@ -24,9 +24,9 @@ export default function SettingsMenu({onEntries = undefined, onPrefs = undefined
           <Settings />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem disabled={!onEntries} onClick={onEntries}>Entries</DropdownMenuItem>
+          <DropdownMenuItem disabled={!onEntries} onClick={onEntries}>Select Entry</DropdownMenuItem>
           <DropdownMenuItem disabled={true}>Account</DropdownMenuItem>
-          <DropdownMenuItem disabled={true}>Dashboard</DropdownMenuItem>
+          <DropdownMenuItem disabled={true}>Conversation Mode</DropdownMenuItem>
           <DropdownMenuItem disabled={!onPrefs} onClick={onPrefs}>Preferences</DropdownMenuItem>
           <DropdownMenuItem disabled={!onLogout} onClick={onLogout}><LogOut /> Log Out</DropdownMenuItem>
         </DropdownMenuContent>
