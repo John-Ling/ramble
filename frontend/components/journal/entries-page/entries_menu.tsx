@@ -14,10 +14,10 @@ interface EntriesPageProps {
 }
 
 export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
-  if (uid === undefined) return null;
-
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const entryMenuRef = useRef<HTMLDivElement>(null);
+  let fetched = null;
+  let areDocumentsLeft = false;
 
   useEffect(() => {
     // event listeners for keyboard navigation
@@ -72,15 +72,6 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
     }
   }
 
-
-  const fetched = useEntries(uid, dbDate, fetchCount);
-   
-  if (!fetched) return null
-  const data = fetched.data;
-  const entries: JournalEntryReference[] | undefined = data?.entries;
-
-  const areDocumentsLeft = data?.areDocumentsLeft;
-
   const on_scroll = useCallback(() => {
     if (!entryMenuRef.current) return;
     if (areDocumentsLeft === undefined || areDocumentsLeft === null) return;
@@ -92,7 +83,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
       }
     }
     return;
-  }, [areDocumentsLeft]);
+  }, [areDocumentsLeft, set_fetch_count]);
     
   useEffect(() => {
     entryMenuRef.current?.addEventListener("scroll", on_scroll);
@@ -101,6 +92,14 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
       entryMenuRef.current?.removeEventListener("scroll", on_scroll);
     }
   });
+
+  fetched = useEntries(uid, dbDate, fetchCount);
+   
+  if (!fetched) return null
+  const data = fetched.data;
+  const entries: JournalEntryReference[] | undefined = data?.entries;
+
+  areDocumentsLeft = data?.areDocumentsLeft;
 
   return (
     <>
@@ -130,7 +129,12 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   )
 }
 
-function useEntries(uid: string, dbDate: string, fetchCount: number) {
+function useEntries(uid: string | undefined, dbDate: string, fetchCount: number) {
+  if (!uid) {
+    return null;
+  }
+
+  console.log("GETTING ENTRIES");
   const fetcher = (url: string) => fetch(url).then(r => r.json());
   const { data, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/${fetchCount}`, fetcher,  {
     dedupingInterval: 5000,

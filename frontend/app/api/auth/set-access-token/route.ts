@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { encode, JWT } from "next-auth/jwt";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
 
@@ -6,9 +8,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: NextRequest) {
     const body = await req.json();
+    const token: JWT = body["token"];
+    const sub = body["sub"];
+
+    // const cookieStore = await cookies();
+    // const accessToken = token.accessToken;
+
+    // if (accessToken === undefined) {
+    //     return new Response("Could not set access token access token is null", {status: 500});
+    // }
+
     if (!process.env.ADMIN_SECRET) {
         return new Response("Auth secret can't be found", {status: 500});
+    }
 
+    if (!process.env.NEXTAUTH_SECRET) {
+        return new Response("Next Auth secret can't be found", {status: 500});
     }
 
     const response = await fetch("http://localhost:8000/api/auth/set-access-token/", {
@@ -17,9 +32,31 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${process.env.ADMIN_SECRET}`
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ sub: sub, token: token.accessToken })
     });
 
-    
-    return Response.json({"message": "Created :)"});
+    // manually create new token
+    // const newToken = await encode({
+    //     token: {...token, accessToken: accessToken},
+    //     secret: process.env.NEXTAUTH_SECRET,
+    // });
+
+    // const cookieName = process.env.NODE_ENV === "production" 
+    //     ? "__Secure-next-auth.session-token" 
+    //     : "next-auth.session-token";
+
+    // // cookieStore.delete(cookieName);
+
+    // cookieStore.set(cookieName, newToken, {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === "production",
+    //     sameSite: "lax",
+    //     path: "/",
+    // });
+
+    if (response.ok) {
+        return Response.json({"message": "Created :)"});
+    }
+
+    return new Response("Could not set access token", {status: 500});
 }

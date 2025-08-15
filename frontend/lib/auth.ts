@@ -9,8 +9,23 @@ import { JWT } from "next-auth/jwt";
 import Google from "next-auth/providers/google";
 
 async function refresh_access_token(token: JWT) {
-    if (process.env.GOOGLE_CLIENT_ID === undefined || process.env.GOOGLE_CLIENT_SECRET === undefined)  return;
+    if (process.env.GOOGLE_CLIENT_ID === undefined || process.env.GOOGLE_CLIENT_SECRET === undefined
+        || process.env.NEXTAUTH_SECRET === undefined
+    ){
+        console.error("Env file missing");
+        return;
+    }  
     if (!token || token.refreshToken === undefined)  return;
+
+    // PROBLEM HERE
+    // when token is refreshed next auth is still using a stale value and sending it
+    // seems to be a rendering issue beacuse hwne I switch tabs or defocus
+    // the cookie refrehses to the up to date one 
+    // but fails again when I reload
+
+
+    // must be a rendering issue
+    // or a caching issue
 
     try {
         const url = "https://oauth2.googleapis.com/token?" +
@@ -30,34 +45,22 @@ async function refresh_access_token(token: JWT) {
 
         const refreshedTokens = await response.json();
 
-        console.debug("REFRESH TOKEN");
-        console.debug(refreshedTokens);
-
         if (!response.ok) {
+            console.error("Could not get refresh tokens");
             throw refreshedTokens;
         }
 
-        token.id = refreshedTokens.id;
-        token.accessToken = refreshedTokens.access_token;
-        token.accessTokenExpires = Date.now() + 24 * 60 * 1000;
-        token.refreshToken = refreshedTokens.refresh_token ?? token.refreshToken;
-
-        console.debug("Token");
-        console.debug(token);
-        if (token.sub === undefined || token.accessToken === undefined) {
+        if (token.sub === undefined) {
             console.debug("Token sub or access token undefined");
             throw refreshedTokens;
         }
 
-        console.log("SENDING TOKEN");
-        console.log(token);
-    
         // reset access token on backend
         response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
             method: "POST",
             body: JSON.stringify({
                 "sub": token.sub,
-                "token": token.accessToken
+                "token": token
             })
         });
 
@@ -66,12 +69,15 @@ async function refresh_access_token(token: JWT) {
             console.log("Refreshed access token");
         }
 
-        console.log("RETURNING TOKEN");
-        console.log(token);
+        return {
+            ...token,
+            accessTokenExpires: Date.now() + 3600 * 1000,
+            accessToken: refreshedTokens.access_token,
+            refreshToken: refreshedTokens.refresh_token
+        } as JWT
 
-        return token;
     } catch (error) {
-        console.log(error)
+        console.error(error)
         // return token;
         return {
             ...token,
@@ -95,33 +101,28 @@ export const config: AuthOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
+            console.log("JWT CALLBACK CALLED");
             if (account && user) {
-                console.debug("INITIAL SIGN IN");
-                console.debug(user);
+                
                 token.idToken = account.id_token;
-                console.debug("UPDATED TOKEN");
-                console.debug(token);
+                
                 if (account.access_token === undefined) {
                     return token;
                 }
 
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;
-                console.debug("ACCOUNT");
-                console.debug(account);
-
-                console.debug("TOKEN");
-                console.debug(token);
+        
                 if (account.expires_at) {
                     console.debug("Setting expiry")
-                    token.accessTokenExpires = Date.now() + 24 * 60 * 1000;
+                    token.accessTokenExpires = Date.now() + 3600 * 1000;
                 }
-        
+                
                 const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
                     method: "POST",
                     body: JSON.stringify({
                         "sub": user.id,
-                        "token": account.access_token
+                        "token": token
                     })
                 });
 
@@ -137,8 +138,8 @@ export const config: AuthOptions = {
 
             // token.refreshToken = account?.refresh_token;
             const ret =  await refresh_access_token(token);
-            console.debug("RET");
-            console.debug(ret);
+            // console.debug("RET");
+            // console.debug(ret);
             if (ret !== undefined) {
                 return ret;
             } else {

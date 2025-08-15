@@ -6,7 +6,7 @@ import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 import { db_date_to_date, date_to_db_date } from "@/lib/utils";
 
-import { signOut } from "next-auth/react";
+import { getSession, signOut, useSession } from "next-auth/react";
 import { useUser } from "@/hooks/useUser";
 
 import { Button } from "../ui/button";
@@ -16,6 +16,7 @@ import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
 
 export default function JournalPage() {
+  console.log("RENDERING");
   const router = useRouter();
   const user = useUser();
   const [content, setContent] = useState<string>("");
@@ -37,16 +38,26 @@ export default function JournalPage() {
   useEffect(() => {
     // autosave at fixed intervals
     const AUTOSAVE_INTERVAL = 1500;
-    const interval = setInterval(autosave, AUTOSAVE_INTERVAL);
+    const interval = setInterval(async () => {
+      if (content !== saved && pendingSave) {
+        await save_without_delay();
+      }
+      setPendingSave(true);
+    }, AUTOSAVE_INTERVAL);
     return (() => {
       clearInterval(interval);
     })
-  });
+  }, [content, saved, pendingSave]);
 
   const load_data = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log("User is null");
+      return;
+    };
     
     setLoadingData(true);
+
+    console.log("Fetching entry");
     const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`);
     if (response.status === 200) {
       // set entry
@@ -97,14 +108,6 @@ export default function JournalPage() {
       textareaRef.current?.focus();
     }, 1000);
     
-    return;
-  }
-
-  async function autosave() {
-    if (content !== saved && pendingSave) {
-      await save_without_delay();
-    }
-    setPendingSave(true);
     return;
   }
 

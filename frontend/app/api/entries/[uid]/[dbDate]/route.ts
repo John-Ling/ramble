@@ -10,8 +10,10 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     const { uid, dbDate } = await params;
     const token = await getToken({ req });
 
+    console.log("CLIENT TOKEN ", token);
+
     if (!token) {
-        return Response.json({"detail": "Could not find session"}, {"status": 500})
+        return Response.json({"detail": "Could not find session"}, {"status": 500});
     }
     
     try {
