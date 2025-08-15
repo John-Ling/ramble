@@ -15,17 +15,8 @@ async function refresh_access_token(token: JWT) {
         console.error("Env file missing");
         return;
     }  
+
     if (!token || token.refreshToken === undefined)  return;
-
-    // PROBLEM HERE
-    // when token is refreshed next auth is still using a stale value and sending it
-    // seems to be a rendering issue beacuse hwne I switch tabs or defocus
-    // the cookie refrehses to the up to date one 
-    // but fails again when I reload
-
-
-    // must be a rendering issue
-    // or a caching issue
 
     try {
         const url = "https://oauth2.googleapis.com/token?" +
@@ -69,12 +60,12 @@ async function refresh_access_token(token: JWT) {
             console.log("Refreshed access token");
         }
 
+        // const newToken = token;
         return {
             ...token,
-            accessTokenExpires: Date.now() + 3600 * 1000,
             accessToken: refreshedTokens.access_token,
-            refreshToken: refreshedTokens.refresh_token
-        } as JWT
+            accessTokenExpires: Date.now() + 3600 * 1000
+        } as JWT;
 
     } catch (error) {
         console.error(error)
@@ -115,7 +106,7 @@ export const config: AuthOptions = {
         
                 if (account.expires_at) {
                     console.debug("Setting expiry")
-                    token.accessTokenExpires = Date.now() + 3600 * 1000;
+                    token.accessTokenExpires = Date.now() + 10 * 1000;
                 }
                 
                 const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
@@ -130,6 +121,8 @@ export const config: AuthOptions = {
             }
 
             if (token.accessTokenExpires) {
+                console.log("Date now ", Date.now());
+                console.log("Expires", token.accessTokenExpires);
                 if (Date.now() < token.accessTokenExpires) {
                     console.log("Token has not expired");
                     return token;
@@ -138,8 +131,8 @@ export const config: AuthOptions = {
 
             // token.refreshToken = account?.refresh_token;
             const ret =  await refresh_access_token(token);
-            // console.debug("RET");
-            // console.debug(ret);
+            console.debug("RET");
+            console.debug(ret);
             if (ret !== undefined) {
                 return ret;
             } else {
