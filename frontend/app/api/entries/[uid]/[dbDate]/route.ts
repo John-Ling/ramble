@@ -1,5 +1,6 @@
 // import { v4 as uuidv4 } from 'uuid';
-import { getToken } from "next-auth/jwt";
+import { encode, getToken } from "next-auth/jwt";
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParameters {
@@ -7,18 +8,15 @@ interface RouteParameters {
 }
 
 export async function GET(req: NextRequest, { params }: RouteParameters) {
+    if (!process.env.NEXTAUTH_SECRET) {
+        return Response.json({"detail": "Auth secret is not set"}, {status: 500});
+    }
     const { uid, dbDate } = await params;
     const token = await getToken({ req });
 
-    console.log("CLIENT TOKEN ", token);
-
-    if (!token) {
-        return Response.json({"detail": "Could not find session"}, {"status": 500});
-    }
-    
     try {
         const response = await fetch(`http://localhost:8000/api/entries/${uid}/${dbDate}/`, {
-            headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json"}
+            headers: {"Authorization": `Bearer ${token?.accessToken}`, "accept": "application/json"}
         });
     
         if (response.status === 204) {
@@ -32,10 +30,6 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     } catch (err) {
         return Response.json({"Error": (err as Error).message}, {"status": 500});
     }
-}
-
-export async function POST(req: NextRequest) {
-
 }
 
 export async function PUT(req: NextRequest, { params }: RouteParameters) {

@@ -8,8 +8,8 @@ declare module "next-auth" {
             email?: string | null;
             image?: string | null;
             idToken?: string | undefined;
-        }
-
+        },
+        refreshed?: boolean | undefined;
     }
 
     interface User {
@@ -24,5 +24,6 @@ declare module "next-auth/jwt" {
         refreshToken?: string | undefined;
         accessToken?: string | undefined;
         accessTokenExpires?: number | undefined;
+        refreshed?: boolean | undefined; 
     }
 }

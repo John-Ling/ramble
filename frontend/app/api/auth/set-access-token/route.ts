@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const token: JWT = body["token"];
     const sub = body["sub"];
 
-    // const cookieStore = await cookies();
+    
     // const accessToken = token.accessToken;
 
     // if (accessToken === undefined) {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     // }
 
     if (!process.env.ADMIN_SECRET) {
-        return new Response("Auth secret can't be found", {status: 500});
+        return new Response("Admin secret can't be found", {status: 500});
     }
 
     if (!process.env.NEXTAUTH_SECRET) {
@@ -32,27 +32,8 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${process.env.ADMIN_SECRET}`
         },
-        body: JSON.stringify({ sub: sub, token: token.accessToken })
-    });
-
-    // manually create new token
-    // const newToken = await encode({
-    //     token: {...token, accessToken: accessToken},
-    //     secret: process.env.NEXTAUTH_SECRET,
-    // });
-
-    // const cookieName = process.env.NODE_ENV === "production" 
-    //     ? "__Secure-next-auth.session-token" 
-    //     : "next-auth.session-token";
-
-    // // cookieStore.delete(cookieName);
-
-    // cookieStore.set(cookieName, newToken, {
-    //     httpOnly: true,
-    //     secure: process.env.NODE_ENV === "production",
-    //     sameSite: "lax",
-    //     path: "/",
-    // });
+        body: JSON.stringify({ sub: sub, token: token })
+    });    
 
     if (response.ok) {
         return Response.json({"message": "Created :)"});

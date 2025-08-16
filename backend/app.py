@@ -68,7 +68,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://10.12.235.141"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -126,6 +126,29 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
     logger.info(f"Changed access token {prev} for UID {sub} to {accessTokens.get(sub)}")
 
     return {"message": "Added token"}
+
+@app.get("/api/auth/access-token/{uid}/", status_code=status.HTTP_200_OK)
+async def get_access_token(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    if accessTokens is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Redis is not running"
+        )
+    
+    adminSecret = credentials.credentials
+    if adminSecret != os.getenv("ADMIN_SECRET"):
+        logger.info("Attempt to get access token denied")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nice try dumbass"
+        )
+
+    logger.info("Getting access token")
+    logger.info(uid)
+    token = accessTokens.get(uid)
+    logger.info(token)
+
+    return JSONResponse(content=token)
 
 @app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)
 async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):

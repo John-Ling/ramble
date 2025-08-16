@@ -14,11 +14,14 @@ import { Textarea } from "../ui/textarea";
 
 import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
+import { useTokenRefresh } from "@/hooks/useTokenRefresh";
 
 export default function JournalPage() {
   console.log("RENDERING");
+  const { data: session, update } = useSession();
   const router = useRouter();
   const user = useUser();
+  // useTokenRefresh();
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
@@ -36,6 +39,14 @@ export default function JournalPage() {
   const readOnly = dbDate !== todayDbDate;
 
   useEffect(() => {
+    if (session?.refreshed) {
+      update();
+      session.refreshed = false;
+    }
+  }, [session?.refreshed]);
+
+  useEffect(() => {
+      
     // autosave at fixed intervals
     const AUTOSAVE_INTERVAL = 1500;
     const interval = setInterval(async () => {
@@ -157,6 +168,7 @@ export default function JournalPage() {
           <div className="flex justify-between pb-2">
             <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+            <Button  onClick={() => update()}>Test</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={loadingData || readOnly} 

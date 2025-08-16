@@ -13,10 +13,10 @@ async function refresh_access_token(token: JWT) {
         || process.env.NEXTAUTH_SECRET === undefined
     ){
         console.error("Env file missing");
-        return;
+        return token;
     }  
 
-    if (!token || token.refreshToken === undefined)  return;
+    if (!token || token.refreshToken === undefined)  return token;
 
     try {
         const url = "https://oauth2.googleapis.com/token?" +
@@ -27,12 +27,22 @@ async function refresh_access_token(token: JWT) {
                 refresh_token: token.refreshToken,
             });
 
-        let response = await fetch(url, {
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            method: "POST",
-        });
+        let response = null;
+        try {
+            response = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method: "POST",
+            });
+        } catch (error) {
+            // catch timeout errors
+            throw error
+        }
+        
+        if (!response) {
+            throw response;
+        }
 
         const refreshedTokens = await response.json();
 
@@ -41,7 +51,7 @@ async function refresh_access_token(token: JWT) {
             throw refreshedTokens;
         }
 
-        if (token.sub === undefined) {
+        if (token.sub === undefined || refreshedTokens.access_token === undefined) {
             console.debug("Token sub or access token undefined");
             throw refreshedTokens;
         }
@@ -51,7 +61,7 @@ async function refresh_access_token(token: JWT) {
             method: "POST",
             body: JSON.stringify({
                 "sub": token.sub,
-                "token": token
+                "token": refreshedTokens.access_token
             })
         });
 
@@ -63,8 +73,10 @@ async function refresh_access_token(token: JWT) {
         // const newToken = token;
         return {
             ...token,
+            refreshed: true,
             accessToken: refreshedTokens.access_token,
-            accessTokenExpires: Date.now() + 3600 * 1000
+            accessTokenExpires: Date.now() + 3600 * 1000,
+            refreshToken: refreshedTokens.refresh_token ?? token.refreshToken
         } as JWT;
 
     } catch (error) {
@@ -72,7 +84,7 @@ async function refresh_access_token(token: JWT) {
         // return token;
         return {
             ...token,
-            error: "RefreshAccessTokenError",
+            error: "Refresh error"
         }
     }
 }
@@ -91,29 +103,26 @@ export const config: AuthOptions = {
         maxAge: 24 * 60 * 60, // 24 hours
     },
     callbacks: {
-        async jwt({ token, user, account }) {
+        async jwt({ token, user, account, trigger }) {
             console.log("JWT CALLBACK CALLED");
-            if (account && user) {
-                
+            if (trigger == "signIn" && account) {
+                console.log("INITIAL SIGN IN");
                 token.idToken = account.id_token;
                 
                 if (account.access_token === undefined) {
+                    console.debug("ACCOUNT ACCESS TOKEN UNDEFINED");
                     return token;
                 }
 
                 token.accessToken = account.access_token;
-                token.refreshToken = account.refresh_token;
-        
-                if (account.expires_at) {
-                    console.debug("Setting expiry")
-                    token.accessTokenExpires = Date.now() + 10 * 1000;
-                }
-                
+                token.refreshToken = account.refresh_token;    
+                token.accessTokenExpires = Date.now() + 5 * 1000;
+      
                 const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
                     method: "POST",
                     body: JSON.stringify({
                         "sub": user.id,
-                        "token": token
+                        "token": account.access_token
                     })
                 });
 
@@ -121,31 +130,30 @@ export const config: AuthOptions = {
             }
 
             if (token.accessTokenExpires) {
-                console.log("Date now ", Date.now());
-                console.log("Expires", token.accessTokenExpires);
                 if (Date.now() < token.accessTokenExpires) {
                     console.log("Token has not expired");
+
+                    if (token.tokenRefreshed) {
+                        delete token.tokenRefreshed;
+                    }
                     return token;
                 }
             }
 
-            // token.refreshToken = account?.refresh_token;
-            const ret =  await refresh_access_token(token);
-            console.debug("RET");
-            console.debug(ret);
-            if (ret !== undefined) {
-                return ret;
-            } else {
-                return token;
-            }
+            const refreshed = await refresh_access_token(token);
+            return refreshed;
         },
 
         async session({ session, token }) {
-
             if (token.idToken) {
                 session.user.idToken = token.idToken;    
             }
-            
+            session.refreshed = false;
+
+            if (token.refreshed) {
+                session.refreshed = true;
+            }
+
             session.user.id = token.sub;
             return session;
         },

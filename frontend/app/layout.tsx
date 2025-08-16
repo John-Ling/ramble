@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/providers/theme_provider";
 import ProvideSession from "@/components/providers/session_provider";
 import { auth } from "@/lib/auth";
 import "./globals.css";
+import TokenRefreshProvider from "@/components/providers/token_refresh_provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
