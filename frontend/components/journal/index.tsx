@@ -38,12 +38,17 @@ export default function JournalPage() {
   // users can only read old entries not make edits to them
   const readOnly = dbDate !== todayDbDate;
 
+  // access tokens take around 1 hour to expire so refresh them 
+  // 5 minutes before they do
+  // i know this isn't the best solution but fuck you
   useEffect(() => {
-    if (session?.refreshed) {
+    setTimeout(() => {
+      console.log("Updating");
       update();
-      session.refreshed = false;
-    }
-  }, [session?.refreshed]);
+
+    }, 3300 * 1000);
+  }, [])
+
 
   useEffect(() => {
       

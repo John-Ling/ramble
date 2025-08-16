@@ -105,6 +105,10 @@ export const config: AuthOptions = {
     callbacks: {
         async jwt({ token, user, account, trigger }) {
             console.log("JWT CALLBACK CALLED");
+
+            // if (trigger == "update") {
+            //     return token;
+            // }
             if (trigger == "signIn" && account) {
                 console.log("INITIAL SIGN IN");
                 token.idToken = account.id_token;
@@ -116,7 +120,7 @@ export const config: AuthOptions = {
 
                 token.accessToken = account.access_token;
                 token.refreshToken = account.refresh_token;    
-                token.accessTokenExpires = Date.now() + 5 * 1000;
+                token.accessTokenExpires = Date.now() + 3600 * 1000;
       
                 const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
                     method: "POST",
@@ -157,6 +161,7 @@ export const config: AuthOptions = {
             session.user.id = token.sub;
             return session;
         },
+        
     }
 } satisfies NextAuthOptions;
 
