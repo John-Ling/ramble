@@ -379,9 +379,25 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
             detail="Document does not exist"
         )
 
-# @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
-# async def upload_entry(uid, str, entry: JournalEntry):
+@app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
+async def upload_entry(uid: str, entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    await check_auth(uid, credentials)
 
+    entryDict = entry.model_dump(by_alias=True)
+    print(entryDict)
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=entryDict, 
+                                        headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
+            response.raise_for_status()
+            return {"message": "Uploaded file"}
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error occurred when uploading"
+            )
+
+    return {"status": "Done"}
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True )

@@ -49,6 +49,11 @@ export default function JournalPage() {
     }, 3300 * 1000);
   }, [])
 
+  // probably fix this later I don't know if this is a security 
+  // vulnerability lmao
+  useEffect(() => {
+    update();
+  }, []);
 
   useEffect(() => {
       
