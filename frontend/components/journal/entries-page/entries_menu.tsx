@@ -1,8 +1,16 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react"
-import { X, FileText } from "lucide-react";
+import { X, FileText, ChevronsLeftRightEllipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
+
+
+interface ResponseData {
+  entries: JournalEntryReference[];
+  finalEntry?:  JournalEntryReference;
+  entryCount: number;
+  areDocumentsLeft: boolean;
+}
 
 interface EntriesPageProps {
   uid: string | undefined;
@@ -16,8 +24,12 @@ interface EntriesPageProps {
 export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const entryMenuRef = useRef<HTMLDivElement>(null);
-  let fetched = null;
-  let areDocumentsLeft = false;
+  const finalEntryRef = useRef<JournalEntryReference | null>(null);
+  const areDocumentsLeftRef = useRef<boolean>(false);
+
+  let data: ResponseData | undefined = undefined;
+  let entries: JournalEntryReference[] = [];
+
 
   useEffect(() => {
     // event listeners for keyboard navigation
@@ -66,24 +78,26 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   });
 
   function selectEntry(index: number) {
-    const entry: JournalEntryReference | undefined = data?.entries[activeIndex];
+    const entry: JournalEntryReference | undefined = entries[activeIndex];
     if (entry) {
       on_entry_select(entry);
     }
   }
 
   const on_scroll = useCallback(() => {
-    if (!entryMenuRef.current) return;
-    if (areDocumentsLeft === undefined || areDocumentsLeft === null) return;
+    if (!entryMenuRef.current)  {
+      console.log("REF NULL");
+      return;
+    };
 
     const SCROLL_THRESHOLD = 5; // pixels
     if (Math.abs(entryMenuRef.current.scrollHeight - entryMenuRef.current.scrollTop) - entryMenuRef.current.clientHeight <= SCROLL_THRESHOLD) {
-      if (areDocumentsLeft) {
+      if (areDocumentsLeftRef.current === true) {
         set_fetch_count();
       }
     }
     return;
-  }, [areDocumentsLeft, set_fetch_count]);
+  }, [areDocumentsLeftRef, set_fetch_count, entryMenuRef]);
     
   useEffect(() => {
     entryMenuRef.current?.addEventListener("scroll", on_scroll);
@@ -91,15 +105,17 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
     return () => {
       entryMenuRef.current?.removeEventListener("scroll", on_scroll);
     }
-  });
+  }, [on_scroll]);
 
-  fetched = useEntries(uid, dbDate, fetchCount);
-   
-  if (!fetched) return null
-  const data = fetched.data;
-  const entries: JournalEntryReference[] | undefined = data?.entries;
-
-  areDocumentsLeft = data?.areDocumentsLeft;
+  const fetched = useEntries(uid, dbDate, fetchCount); 
+  if (!fetched) {
+    console.log("Fetched is null");
+    return null;
+  };
+  data = fetched?.data;
+  console.log("DATA ", data);
+  entries = data?.entries;
+  areDocumentsLeftRef.current = data ? data.areDocumentsLeft : false;
 
   return (
     <>
@@ -136,10 +152,11 @@ function useEntries(uid: string | undefined, dbDate: string, fetchCount: number)
 
   console.log("GETTING ENTRIES");
   const fetcher = (url: string) => fetch(url).then(r => r.json());
-  const { data, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/${fetchCount}`, fetcher,  {
+
+  // use mutate for more efficient pagination 
+  const { data, mutate, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/${fetchCount}`, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });
-
-  return { data: data, error, isLoading };
+  return { data: data as ResponseData, mutate, error, isLoading };
 }

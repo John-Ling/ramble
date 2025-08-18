@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
         accessTokens = redis.Redis(host="172.17.0.1", port=8002, decode_responses=True)
-        db = client["test"]
+        db = client["prod"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
 
@@ -298,9 +298,8 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
         for entry in entriesBefore:
             entries.append(entry)
-        
-        # Add 1 extra to count for first entry
-        count = count + 1
+    
+        count = count
         finalEntry: JournalEntryReference | None = None
         areDocumentsLeft = True
 
@@ -310,8 +309,10 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         else: 
             # remove final entry and keep track of it 
             finalEntry = entries.pop()
-            if finalEntry and finalEntry.created:
-                (entriesLeft, _) = await get_entries_before(uid, finalEntry.created, fetchCount=1)
+            print(finalEntry)
+            print(finalEntry["_id"])
+            if finalEntry and finalEntry["_id"]:
+                (entriesLeft, _) = await get_entries_before(uid, finalEntry["_id"], fetchCount=1)
                 if entriesLeft:
                     areDocumentsLeft = True
         
@@ -384,7 +385,6 @@ async def upload_entry(uid: str, entry: JournalEntry = Body(...), credentials: H
     await check_auth(uid, credentials)
 
     entryDict = entry.model_dump(by_alias=True)
-    print(entryDict)
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=entryDict, 

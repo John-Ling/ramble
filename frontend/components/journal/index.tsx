@@ -58,7 +58,7 @@ export default function JournalPage() {
   useEffect(() => {
       
     // autosave at fixed intervals
-    const AUTOSAVE_INTERVAL = 1500;
+    const AUTOSAVE_INTERVAL = 1000;
     const interval = setInterval(async () => {
       if (content !== saved && pendingSave) {
         await save_without_delay();
@@ -161,7 +161,10 @@ export default function JournalPage() {
       <div className="min-h-screen flex flex-col justify-center items-center">
         { entriesVisible ? 
         <div className={`fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} set_fetch_count={() => setFetchCount(prev => prev + 12)} on_close={on_entry_menu_close} on_entry_select={load_entry} />
+          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} 
+                      set_fetch_count={() => setFetchCount(prev => prev + 12)} 
+                      on_close={on_entry_menu_close} on_entry_select={load_entry} 
+          />
         </div> : null
         }
       
