@@ -98,6 +98,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   if (!fetched) return null
   const data = fetched.data;
   const entries: JournalEntryReference[] | undefined = data?.entries;
+  console.log(entries);
 
   areDocumentsLeft = data?.areDocumentsLeft;
 

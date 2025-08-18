@@ -10,7 +10,7 @@ class Token(BaseModel):
 
 
 class JournalEntryReference(BaseModel):
-    created: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str = ""
     favourite: bool = False
 

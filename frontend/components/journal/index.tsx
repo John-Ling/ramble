@@ -82,6 +82,8 @@ export default function JournalPage() {
       setSaved(entry.content);
     } else {
       console.log("Could not get entry");
+      setContent("");
+      setSaved("");
     }
 
     setLoadingData(false);
@@ -173,7 +175,6 @@ export default function JournalPage() {
           <div className="flex justify-between pb-2">
             <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
-            <Button  onClick={() => update()}>Test</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={loadingData || readOnly} 

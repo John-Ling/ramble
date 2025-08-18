@@ -307,14 +307,14 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
     try:
         firstEntry = await _get_entry(uid, dbDate)
+
         if firstEntry is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error"
-            )
-        
+            # create dummy entry
+            firstEntry = JournalEntryReference(_id=dbDate, name="", favourite=False).dict(by_alias=True)
+            logger.debug(firstEntry)
+
+            # convert id to _id
         entries = [firstEntry]
-        logger.info(firstEntry)
     
         (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
 
@@ -343,6 +343,7 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
                 if entriesLeft:
                     areDocumentsLeft = True
         
+
         return {"entries": entries, "finalEntry": finalEntry, "entryCount": max(0, count - 1), "areDocumentsLeft": areDocumentsLeft}
     
 

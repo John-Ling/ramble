@@ -3,9 +3,12 @@
 import ProtectedRoute from "../providers/protected_route";
 import { Separator } from "@/components/ui/separator"
 import { Button } from "../ui/button";
-import { Upload, FileText } from "lucide-react";
+import FileUpload from "./file_upload";
+import { useUser } from "@/hooks/useUser";
 
 export default function PreferencesPage() {
+  const user  = useUser();
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex justify-center items-center">
@@ -33,21 +36,7 @@ export default function PreferencesPage() {
               <h1>Content</h1>
             </div>
             <div className="h-full flex flex-col items-center justify-center">
-              <h3 className="font-bold text-2xl text-center mb-5">Upload Entries</h3>
-              <div className="bg-[#111111] h-[30vh] w-1/2 flex flex-col justify-center items-center">
-                  <div className="flex justify-center items-center flex-col">
-                    <FileText className="size-16"/>
-                    <p className="mb-5 text-lg">Drag and Drop Files</p>
-                  </div>
-                  
-                  <label className="flex justify-center flex-col items-center">
-                    <Upload className="text-center"/> 
-                    <input id="file-upload" className="hidden p-5" type="file" />
-                  </label>
-                  <div className="pointer-events-none">
-                    or upload from your computer
-                  </div>
-              </div>
+              <FileUpload uid={user?.id}/>
             </div>
             <div className="h-full flex ">
               <h1>Content</h1>
