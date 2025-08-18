@@ -1,6 +1,5 @@
 // import { v4 as uuidv4 } from 'uuid';
 import { encode, getToken } from "next-auth/jwt";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParameters {
@@ -42,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
 
     const entry: JournalEntry = await req.json() as JournalEntry;
 
-    // try updating entry
+    // Try updating entry if it exists
     let response = await fetch(`http://localhost:8000/api/entries/${uid}/${dbDate}/`, {
         method: "PUT",
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
@@ -53,16 +52,16 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
 
     if (response.ok) {
         console.log("UPDATED DOCUMENT");
-        return Response.json({"message": "Updated document"})
+        return Response.json({"message": "Updated document"});
     }
 
     console.log("Sending request")
-    // create entry
-    response = await fetch("http://localhost:8000/api/users/create-entry/", {
+    // Entry does not exist so try create a new one 
+    response = await fetch(`http://localhost:8000/api/entries/${uid}`, {
         method: "POST",
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({
-            _id: uid + dbDate,
+            _id: dbDate,
             authorID: uid,
             created: dbDate,
             content: entry.content

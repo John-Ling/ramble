@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
         accessTokens = redis.Redis(host="172.17.0.1", port=8002, decode_responses=True)
-        db = client["prod"]
+        db = client["test"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
 
@@ -150,8 +150,8 @@ async def get_access_token(uid: str, credentials: HTTPAuthorizationCredentials =
 
     return JSONResponse(content=token)
 
-@app.post("/api/users/create-entry/", status_code=status.HTTP_201_CREATED)
-async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+@app.post("/api/entries/{uid}/", status_code=status.HTTP_201_CREATED)
+async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Takes the schema for a journal entry and creates both a reference and entry
     The reference is inserted into the user's entries
@@ -164,11 +164,7 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
             detail="User collection is Null"
         )
     
-    uid = entry.authorID
-    try:
-        await check_auth(uid, credentials)
-    except HTTPException as e:
-        raise e
+    await check_auth(uid, credentials)
     
     user = await userCollection.find_one({"_id": uid})
     entryDict = entry.model_dump(by_alias=True)
@@ -181,7 +177,7 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
     
     # Insert entry reference
     entryReference: JournalEntryReference = JournalEntryReference() 
-    entryReference.created = entryDict["created"]
+    entryReference.id = entryDict["created"]
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
     if user is not None:
@@ -194,61 +190,40 @@ async def create_entry_reference_and_insert_entry(entry: JournalEntry = Body(...
         await userCollection.insert_one(newUser)
     
     # Insert actual entry into database
-    async with httpx.AsyncClient() as client:
-        try:
 
-            print("Making call")
-            response = await client.post("http://localhost:8000/api/entries/insert-entry/", 
-                                        json=entryDict, 
-                                        headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
-        
-            print("Checking status")
-            response.raise_for_status()
-            return {"message": "Everything done :)"}
-        except httpx.HTTPError as e:
-            print("Rollback")
-            print(e)
-            # Rollback transaction and remove entry reference
-            if user is not None:
-                await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})
-            else:
-                await userCollection.find_one_and_delete({"_id": uid})
-            
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="walao something go wrong undoing change"
-            )
+    if await _insert_entry(entry) is not None:
+        return {"message": "Everything done :)"}
 
-@app.post("/api/entries/insert-entry/", status_code=status.HTTP_201_CREATED)
-async def insert_entry(response: Response, entry: dict = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    # roll back change
+    print("Rollback")
+    print(e)
+    # Rollback transaction and remove entry reference
+    if user is not None:
+        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})
+    else:
+        await userCollection.find_one_and_delete({"_id": uid})
+    
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="walao something go wrong undoing change"
+    )
+
+async def _insert_entry(entry: JournalEntry):
     """
     Insert a journal entry into the entries collection
     """
     if entryCollection is None:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise httpx.HTTPError(
-            message="Entry collection is Null"
-        )
-    
-    if (entry["created"] == "" or entry["_id"] == "" or entry["authorID"] == ""):
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        raise httpx.HTTPError(
-            message="Malformed request"
-        )
+        return None
 
-    await check_auth(entry["authorID"], credentials)
+    entryDict = entry.model_dump(by_alias=True)    
 
-    existingEntry = await entryCollection.find_one({"authorID": entry["authorID"], "created": entry["created"]})
+    existingEntry = await entryCollection.find_one({"authorID": entryDict["authorID"], "created": entryDict["created"]})
+
     if existingEntry is not None:
-        response.status_code = status.HTTP_409_CONFLICT
-        raise httpx.HTTPError(
-            message="Entry already exists"
-        )
+        return None
 
-    await entryCollection.insert_one(entry)
+    await entryCollection.insert_one(entryDict)
     return { "message": "Wrote document" }
-
-
 
 async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
     pipeline = [
@@ -319,10 +294,7 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
 
         if not entriesBefore or not count:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User does not exist or no entries found"
-            )
+            return {"entries": entries, "finalEntry": None, "entryCount": 1, "areDocumentsLeft": False}
 
         for entry in entriesBefore:
             entries.append(entry)
@@ -343,10 +315,7 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
                 if entriesLeft:
                     areDocumentsLeft = True
         
-
         return {"entries": entries, "finalEntry": finalEntry, "entryCount": max(0, count - 1), "areDocumentsLeft": areDocumentsLeft}
-    
-
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -376,7 +345,6 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
             detail="Entry collection is Null"
         )
 
-
     await check_auth(uid, credentials)
 
     entry = await _get_entry(uid, dbDate)
@@ -385,7 +353,6 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
 
     response.status_code = status.HTTP_404_NOT_FOUND
     return None
-
 
 @app.put("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
 async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
@@ -411,6 +378,10 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document does not exist"
         )
+
+# @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
+# async def upload_entry(uid, str, entry: JournalEntry):
+
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True )
