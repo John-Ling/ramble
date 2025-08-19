@@ -33,7 +33,6 @@ export default function JournalPage() {
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  const { theme, setTheme } = useTheme();
 
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
@@ -53,6 +52,12 @@ export default function JournalPage() {
 
     }, 3300 * 1000);
   }, [])
+
+  useEffect(() => {
+    // read and set theme from local storage
+    
+
+  })
 
   // probably fix this later I don't know if this is a security 
   // vulnerability lmao
@@ -77,13 +82,10 @@ export default function JournalPage() {
 
   const load_data = useCallback(async () => {
     if (!user) {
-      console.log("User is null");
       return;
     };
     
     setLoadingData(true);
-
-    console.log("Fetching entry");
     const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`);
     if (response.status === 200) {
       // set entry
@@ -91,7 +93,6 @@ export default function JournalPage() {
       setContent(entry.content);
       setSaved(entry.content);
     } else {
-      console.log("Could not get entry");
       setContent("");
       setSaved("");
     }

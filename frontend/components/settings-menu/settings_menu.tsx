@@ -4,9 +4,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import { Settings } from "lucide-react"
-
 import { LogOut } from "lucide-react"
 
 interface SettingsMenuProps {
@@ -19,7 +17,7 @@ interface SettingsMenuProps {
 export default function SettingsMenu({onEntries = undefined, onPrefs = undefined, onLogout = undefined, disabled}: SettingsMenuProps) {
   return (
     <>
-      <DropdownMenu >
+      <DropdownMenu>
         <DropdownMenuTrigger className="size-8 hover:text-gray-300" disabled={disabled} aria-disabled={disabled}>
           <Settings />
         </DropdownMenuTrigger>
