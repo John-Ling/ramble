@@ -13,7 +13,7 @@ export default function PreferencesPage() {
     <ProtectedRoute>
       <div className="min-h-screen flex justify-center items-center">
         <div className="bg-[#101010] w-full lg:w-3/5 flex justify-between">
-          {/* sidebar */}
+          {/* Sidebar */}
           <div className="hidden lg:block p-5 m-5 h-[85vh] w-full lg:w-1/5  bg-[#141414] rounded-sm">
             <div className="flex flex-col w-full ">
               <h1 className="font-bold text-2xl">Settings</h1>
@@ -30,20 +30,39 @@ export default function PreferencesPage() {
             </div>
           </div>
 
-          {/* content */}
+          {/* Content */}
           <div className="p-5 m-5 mr-3 h-[85vh] w-full lg:w-4/5  bg-[#141414]  rounded-sm overflow-y-scroll">
             <div className="h-full flex">
               <h1>Content</h1>
             </div>
+
+            {/* File upload */}
             <div className="h-full flex flex-col items-center justify-center">
               <FileUpload uid={user?.id}/>
             </div>
+
+            {/* Privacy settings */}
             <div className="h-full flex ">
               <h1>Content</h1>
             </div>
+
+            {/* Templates */}
             <div className="h-full flex">
               <h1>Content</h1>
             </div>
+
+
+            {/* Language  */}
+            <div className="h-full flex">
+              <h1>Content</h1>
+            </div>
+
+            {/* Colour Theme  */}
+            <div className="h-full flex">
+              <h1 className="text-3xl font-bold">Theme</h1>
+              
+            </div>
+
           </div>
         </div>
       </div>

@@ -129,7 +129,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
           <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
             {entries?.map((entry: JournalEntryReference, i: number) => {
               return (
-                <div key={i} onClick={() => selectEntry(i)} onMouseOver={() => setActiveIndex(i)}  className={`hover:cursor-pointer flex flex-col items-center p-2 rounded-sm ${ i === activeIndex ? "bg-orange-400 text-black" : ""}`}>
+                <div key={i} onClick={() => selectEntry(i)} onMouseOver={() => setActiveIndex(i)}  className={`hover:cursor-pointer flex flex-col items-center p-2 rounded-md ${ i === activeIndex ? "bg-chart-2 text-black" : ""}`}>
                   <FileText size={48} />
                   <p className="text-sm">
                     {entry._id}

@@ -15,6 +15,9 @@ import { Textarea } from "../ui/textarea";
 import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
 import { useTokenRefresh } from "@/hooks/useTokenRefresh";
+import { Container } from "lucide-react";
+
+import { useTheme } from "next-themes";
 
 export default function JournalPage() {
   console.log("RENDERING");
@@ -29,6 +32,8 @@ export default function JournalPage() {
   const currentDate: string = new Date().toLocaleDateString();
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const { theme, setTheme } = useTheme();
 
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
@@ -154,6 +159,10 @@ export default function JournalPage() {
     setEntriesVisible(true);
     return;
   }
+
+  // const trigger_theme = () => {
+  //   document.body.setAttribute("data-theme", "gruvbox");
+  // }
 
 
   return (

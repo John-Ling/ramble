@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/components/providers/theme_provider";
 import ProvideSession from "@/components/providers/session_provider";
 import { auth } from "@/lib/auth";
 import "./globals.css";
-import TokenRefreshProvider from "@/components/providers/token_refresh_provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,21 +27,32 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-theme="nord">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* potentially change this (read up on RSC paradigm and converting entire app into client compoennts by wrapping providers) */}
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
+        {/* <ThemeProvider
+            attribute="data-theme"
+            themes={[
+            'solarized-dark',
+            'solarized-light',
+            'monokai',
+            'atom-one-light',
+            'atom-one-dark',
+            'everforest-dark',
+            'everforest-light',
+            'tokyo-night',
+            'catppuccin',
+            'nord'
+            ]}
+            defaultTheme="nord"
             enableSystem
             disableTransitionOnChange
-        >
+        > */}
           <ProvideSession session={session}>
             {children}
           </ProvideSession>
-        </ThemeProvider>
+        {/* </ThemeProvider> */}
       </body>
     </html>
   );

@@ -12,8 +12,6 @@ interface FileItem {
   createdOn: number;
 }
 
-
-
 interface FileUploadProps {
   uid?: string;
 }
@@ -21,10 +19,9 @@ interface FileUploadProps {
 export default function FileUpload({ uid }: FileUploadProps) {
   const allowedTypes = ['txt', 'doc', 'docx'];
   // const [files, setFiles] = useState<FileItem[]>([]);
-  // const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "failed" | "idle">("idle");
-  // const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "failed" | "idle">("idle");
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   async function upload_file(file: FileItem) {
 
@@ -44,6 +41,7 @@ export default function FileUpload({ uid }: FileUploadProps) {
     if (response.ok) {
       console.log("Successfully uploaded files");
     }
+    return;
   }
 
   async function upload_files(files: FileItem[]) {
@@ -54,33 +52,28 @@ export default function FileUpload({ uid }: FileUploadProps) {
     })
   }
 
-
   const on_drag_over = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    // setIsDragging(true);
-    console.log("Dragged over");
+    setIsDragging(true);
   };
 
   const on_drag_leave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    // setIsDragging(false);
-    console.log("Left drag");
+    setIsDragging(false);
   };
 
   const on_drop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    // setIsDragging(false);
-    console.log("Dropped file");
-
-    
+    setIsDragging(false);
+    setUploadStatus("uploading");
     const droppedFiles = Array.from(e.dataTransfer.files);
     const uploadFiles: FileItem[] = [];
     droppedFiles.forEach((file: File) => {
       uploadFiles.push({id: Date.now() + Math.random(), file: file, name: file.name, size: file.size, type: file.type} as FileItem);
     })
-
     await upload_files(uploadFiles);
-    // addFiles(droppedFiles);
+    setUploadStatus("idle");
+    return;
   };
 
   const on_file_select = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,27 +93,20 @@ export default function FileUpload({ uid }: FileUploadProps) {
     }
   }
 
-
   return (
     <>
      <h3 className="font-bold text-2xl text-center mb-5">Upload Entries</h3>
-      <div className="bg-[#111111] h-[30vh] w-full lg:w-1/2 flex flex-col justify-center items-center"
+      <div className="bg-[#111111] h-[30vh] w-full lg:w-3/5 flex flex-col justify-center items-center"
         onClick={() => fileInputRef.current?.click()}
         onDrop={on_drop}
         onDragLeave={on_drag_leave}
         onDragOver={on_drag_over}
       >
         <div className="flex justify-center items-center flex-col">
-          <FileText className="size-16"/>
-          <p className="mb-5 text-lg">Drag and Drop Files</p>
+          <FileText className={`size-16 ${isDragging ? "text-orange-400" : "" }`} />
+          <p className="mb-5 text-lg">{uploadStatus === "uploading" ? "Uploading..." : "Drag and Drop Files"}</p>
         </div>
-        <label className="flex justify-center flex-col items-center">
-          <Upload className="text-center"/> 
-          <input ref={fileInputRef} id="file-upload" multiple className="hidden" type="file" />
-        </label>
-        <div className="pointer-events-none">
-          or upload from your computer
-        </div>
+        <input ref={fileInputRef} id="file-upload" multiple className="hidden" type="file" disabled={uploadStatus === "uploading" ? true : false} />
       </div>
     </>
   ) 
