@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
         accessTokens = redis.Redis(host="172.17.0.1", port=8002, decode_responses=True)
-        db = client["prod"]
+        db = client["development"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
 
@@ -196,7 +196,6 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
 
     # roll back change
     print("Rollback")
-    print(e)
     # Rollback transaction and remove entry reference
     if user is not None:
         await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})

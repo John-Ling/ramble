@@ -446,46 +446,6 @@
   --color-chart-5: #d699b6;
 }
 
-
-:root,
-[data-theme="everforest-dark"] {
-  --color-background: #2d353b;
-  --color-foreground: #d3c6aa;
-
-  --color-primary: #7fbbb3;
-  --color-primary-foreground: #2d353b;
-  --color-secondary: #a7c080;
-  --color-secondary-foreground: #2d353b;
-
-  --color-sidebar: #374145;
-  --color-sidebar-foreground: #d3c6aa;
-  --color-sidebar-primary: #7fbbb3;
-  --color-sidebar-primary-foreground: #2d353b;
-  --color-sidebar-accent: #e69875;
-  --color-sidebar-accent-foreground: #2d353b;
-  --color-accent: #7fbbb3;
-  --color-accent-foreground: #2d353b;
-
-  --color-border: #374145;
-  --color-ring: #a7c080;
-  --color-input: #374145;
-  --color-muted: #859289;
-  --color-muted-foreground: #d3c6aa;
-
-  --color-popover: #374145;
-  --color-popover-foreground: #d3c6aa;
-  --color-card: #374145;
-  --color-card-foreground: #d3c6aa;
-
-  --color-destructive: #e67e80;
-
-  --color-chart-1: #7fbbb3;
-  --color-chart-2: #a7c080;
-  --color-chart-3: #e69875;
-  --color-chart-4: #dbbc7f;
-  --color-chart-5: #d699b6;
-}
-
 :root,
 [data-theme="light"] {
   --color-background: oklch(0.985 0 0);
@@ -546,6 +506,44 @@
   --color-card: oklch(0.205 0 0);
 }
 
+:root,
+[data-theme="everforest-dark"] {
+  --color-background: #2d353b;
+  --color-foreground: #d3c6aa;
+
+  --color-primary: #7fbbb3;
+  --color-primary-foreground: #2d353b;
+  --color-secondary: #a7c080;
+  --color-secondary-foreground: #2d353b;
+
+  --color-sidebar: #374145;
+  --color-sidebar-foreground: #d3c6aa;
+  --color-sidebar-primary: #7fbbb3;
+  --color-sidebar-primary-foreground: #2d353b;
+  --color-sidebar-accent: #e69875;
+  --color-sidebar-accent-foreground: #2d353b;
+  --color-accent: #7fbbb3;
+  --color-accent-foreground: #2d353b;
+
+  --color-border: #374145;
+  --color-ring: #a7c080;
+  --color-input: #374145;
+  --color-muted: #859289;
+  --color-muted-foreground: #d3c6aa;
+
+  --color-popover: #374145;
+  --color-popover-foreground: #d3c6aa;
+  --color-card: #374145;
+  --color-card-foreground: #d3c6aa;
+
+  --color-destructive: #e67e80;
+
+  --color-chart-1: #7fbbb3;
+  --color-chart-2: #a7c080;
+  --color-chart-3: #e69875;
+  --color-chart-4: #dbbc7f;
+  --color-chart-5: #d699b6;
+}
 
 
 
