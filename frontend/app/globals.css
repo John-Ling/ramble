@@ -265,45 +265,6 @@
   --color-chart-5: #56b6c2;
 } 
 
-:root,
-[data-theme="gruvbox"] {
-  --color-background: #282828;
-  --color-foreground: #ebdbb2;
-  --color-primary:   #d79921;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --color-primary-foreground: #282828;
-  --color-secondary: #458588;
-  --color-secondary-foreground: #282828;
-  --color-accent: #b16286;
-  --color-accent-foreground: #282828;
-  --color-destructive: #cc241d;
-  --color-muted: #3c3836;
-  --color-muted-foreground: #ebdbb2;
-  --color-border: #504945;
-  --color-input: #3c3836;
-  --color-popover: #282828;
-  --color-popover-foreground: #ebdbb2;
-  --color-card: #3c3836;
-  --color-card-foreground: #ebdbb2;
-  --color-sidebar: #3c3836;
-  --color-sidebar-foreground: #ebdbb2;
-  --color-sidebar-primary: #d79921;
-  --color-sidebar-primary-foreground: #282828;
-  --color-sidebar-accent: #b16286;
-  --color-sidebar-accent-foreground: #282828;
-  --color-sidebar-border: #504945;
-  --color-sidebar-ring: #504945;
-  --color-chart-1: #d79921;
-  --color-chart-2: #458588;
-  --color-chart-3: #b16286;
-  --color-chart-4: #98971a;
-  --color-chart-5: #cc241d;
-  --radius-sm: calc(0.625rem- 4px);
-  --radius-md: calc(0.625rem - 2px);
-  --radius-lg: 0.625rem;
-  --radius-xl: calc(0.625rem + 4px);
-} 
 
 :root,
 [data-theme="tokyo-night"] {
@@ -545,6 +506,46 @@
   --color-chart-5: #d699b6;
 }
 
+
+:root,
+[data-theme="gruvbox"] {
+  --color-background: #282828;
+  --color-foreground: #ebdbb2;
+  --color-primary:   #d79921;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-primary-foreground: #282828;
+  --color-secondary: #458588;
+  --color-secondary-foreground: #282828;
+  --color-accent: #b16286;
+  --color-accent-foreground: #282828;
+  --color-destructive: #cc241d;
+  --color-muted: #3c3836;
+  --color-muted-foreground: #ebdbb2;
+  --color-border: #504945;
+  --color-input: #3c3836;
+  --color-popover: #282828;
+  --color-popover-foreground: #ebdbb2;
+  --color-card: #3c3836;
+  --color-card-foreground: #ebdbb2;
+  --color-sidebar: #3c3836;
+  --color-sidebar-foreground: #ebdbb2;
+  --color-sidebar-primary: #d79921;
+  --color-sidebar-primary-foreground: #282828;
+  --color-sidebar-accent: #b16286;
+  --color-sidebar-accent-foreground: #282828;
+  --color-sidebar-border: #504945;
+  --color-sidebar-ring: #504945;
+  --color-chart-1: #d79921;
+  --color-chart-2: #458588;
+  --color-chart-3: #b16286;
+  --color-chart-4: #98971a;
+  --color-chart-5: #cc241d;
+  --radius-sm: calc(0.625rem- 4px);
+  --radius-md: calc(0.625rem - 2px);
+  --radius-lg: 0.625rem;
+  --radius-xl: calc(0.625rem + 4px);
+} 
 
 
 @layer base {

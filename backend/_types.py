@@ -8,9 +8,9 @@ class Token(BaseModel):
     accessToken: str
     type: str
 
-
 class JournalEntryReference(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    created: str = ""
     name: str = ""
     favourite: bool = False
 

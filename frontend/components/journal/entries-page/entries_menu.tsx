@@ -134,7 +134,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
                 >
                   <FileText size={48} />
                   <p className="text-sm">
-                    {entry._id}
+                    {entry.created}
                   </p>
                 </div>
               )

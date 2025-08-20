@@ -142,7 +142,7 @@ export default function JournalPage() {
 
   const load_entry = (entry: JournalEntryReference) => {
     console.log(entry);
-    setDbDate(entry._id);
+    setDbDate(entry.created);
   }
 
   const on_entry_menu_close = () => {

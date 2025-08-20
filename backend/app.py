@@ -178,6 +178,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
     # Insert entry reference
     entryReference: JournalEntryReference = JournalEntryReference() 
     entryReference.id = entryDict["created"]
+    entryReference.created = entryDict["created"]
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
     if user is not None:
@@ -281,13 +282,12 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
     try:
         firstEntry = await _get_entry(uid, dbDate)
+        print(firstEntry)
 
         if firstEntry is None:
             # create dummy entry
-            firstEntry = JournalEntryReference(_id=dbDate, name="", favourite=False).dict(by_alias=True)
+            firstEntry = JournalEntryReference(_id=dbDate, created=dbDate, name="", favourite=False).model_dump(by_alias=True)
             logger.debug(firstEntry)
-
-            # convert id to _id
         entries = [firstEntry]
     
         (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
@@ -299,7 +299,7 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             entries.append(entry)
     
         count = count
-        finalEntry: JournalEntryReference | None = None
+        finalEntry = None
         areDocumentsLeft = True
 
         if (count != fetchCount + 1):
