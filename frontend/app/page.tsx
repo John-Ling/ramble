@@ -1,6 +1,5 @@
+import Page from "@/components/root";
+
 export default function Home() {
-  return (
-    <>
-    </>
-  );
+  return <Page/>
 }

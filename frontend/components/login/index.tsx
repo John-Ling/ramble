@@ -21,10 +21,10 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="min-h-screen w-full flex items-center justify-center flex-col">
-        <div>
-          <h1 className="font-bold text-4xl">Ramble</h1>
-          <h2 className="text-3xl">What&apos;s on your mind?</h2>
+      <div className="min-h-[50vh] w-full flex items-center justify-center flex-col">
+        <div className="p-5 pl-10 pr-10 bg-background  border-accent border-2 flex flex-col gap-4">
+          <h1 className="font-bold text-5xl text-center">RAMBLE</h1>
+          <h2 className="text-xl text-center">What&apos;s on your mind?</h2>
           <LoginForm />
         </div>
       </div>
