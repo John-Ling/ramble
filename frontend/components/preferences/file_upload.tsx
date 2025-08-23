@@ -1,7 +1,6 @@
 "use client";
-import { FileText, Upload } from "lucide-react"
+import { FileText} from "lucide-react"
 import React, { useState, useRef } from "react";
-import { v4 as uuidv4 } from 'uuid';
 
 interface FileItem {
   id: number;
@@ -16,8 +15,9 @@ interface FileUploadProps {
   uid?: string;
 }
 
+// probably remove this if doing initial demo since there are no checks to ensure the correct file
 export default function FileUpload({ uid }: FileUploadProps) {
-  const allowedTypes = ['txt', 'doc', 'docx'];
+  // const allowedTypes = ['txt', 'doc', 'docx']; // add security checks for files later
   // const [files, setFiles] = useState<FileItem[]>([]);
   const [uploadStatus, setUploadStatus] = useState<"uploading" | "success" | "failed" | "idle">("idle");
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -76,22 +76,22 @@ export default function FileUpload({ uid }: FileUploadProps) {
     return;
   };
 
-  const on_file_select = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Selected file");
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      console.log(selectedFiles);
-      // addFiles(selectedFiles);
-    }
-  };
+  // const on_file_select = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   console.log("Selected file");
+  //   if (e.target.files) {
+  //     const selectedFiles = Array.from(e.target.files);
+  //     console.log(selectedFiles);
+  //     // addFiles(selectedFiles);
+  //   }
+  // };
 
-  const on_change = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("CHANGE");
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      console.log(selectedFiles);
-    }
-  }
+  // const on_change = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   console.log("CHANGE");
+  //   if (e.target.files) {
+  //     const selectedFiles = Array.from(e.target.files);
+  //     console.log(selectedFiles);
+  //   }
+  // }
 
   return (
     <>

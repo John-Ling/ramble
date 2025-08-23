@@ -122,7 +122,7 @@ export const config: AuthOptions = {
                 token.refreshToken = account.refresh_token;    
                 token.accessTokenExpires = Date.now() + 3600 * 1000;
       
-                const response = await fetch("http://localhost:3000/api/auth/set-access-token/", {
+                await fetch("http://localhost:3000/api/auth/set-access-token/", {
                     method: "POST",
                     body: JSON.stringify({
                         "sub": user.id,
@@ -151,11 +151,6 @@ export const config: AuthOptions = {
         async session({ session, token }) {
             if (token.idToken) {
                 session.user.idToken = token.idToken;    
-            }
-            session.refreshed = false;
-
-            if (token.refreshed) {
-                session.refreshed = true;
             }
 
             session.user.id = token.sub;

@@ -1,10 +1,9 @@
 import { NextRequest } from "next/server";
-import { encode, JWT } from "next-auth/jwt";
-import { cookies } from "next/headers";
+import { JWT } from "next-auth/jwt";
 
-export async function GET(request: NextRequest) {
+// export async function GET(request: NextRequest) {
 
-}
+// }
 
 export async function POST(req: NextRequest) {
     const body = await req.json();

@@ -2,7 +2,7 @@ import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
 
 interface RouteParameters {
-    params: Promise<{ uid: string, dbDate: string, fetchCount: Number }>;
+    params: Promise<{ uid: string, dbDate: string, fetchCount: number }>;
 }
 
 export async function GET(req: NextRequest, { params }: RouteParameters) {

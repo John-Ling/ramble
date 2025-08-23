@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 import { db_date_to_date, date_to_db_date } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { Textarea } from "../ui/textarea";
 import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
+import { User } from "next-auth";
 
 export default function JournalPage() {
   console.log("RENDERING");
@@ -24,7 +25,6 @@ export default function JournalPage() {
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
-  const [loadingData, setLoadingData] = useState<boolean>(true);
   const currentDate: string = new Date().toLocaleDateString();
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -41,21 +41,16 @@ export default function JournalPage() {
   // 5 minutes before they do
   // i know this isn't the best solution but fuck you
   useEffect(() => {
-    setTimeout(() => {
+    setTimeout(async () => {
       console.log("Updating");
+      await save_with_delay();
+      
       update();
 
     }, 3300 * 1000);
-  }, []);
-
-  // probably fix this later I don't know if this is a security 
-  // vulnerability lmao
-  useEffect(() => {
-    update();
-  }, []);
+  }, [update]);
 
   useEffect(() => {
-      
     // autosave at fixed intervals
     const AUTOSAVE_INTERVAL = 1000;
     const interval = setInterval(async () => {
@@ -67,7 +62,7 @@ export default function JournalPage() {
     return (() => {
       clearInterval(interval);
     })
-  }, [content, saved, pendingSave]);
+}, [content, saved, pendingSave]);
 
   async function save_without_delay() {
     if (!user || user.id === undefined) return;
@@ -130,11 +125,7 @@ export default function JournalPage() {
   //   document.body.setAttribute("data-theme", "gruvbox");
   // }
 
-  if (!user || !user.id) {
-    return null;
-  } 
-
-  const fetched = useLoadedEntry(user.id, todayDbDate);
+  const fetched = useLoadedEntry(user, todayDbDate);
 
   useEffect(() => {
     if (fetched.data) {
@@ -149,7 +140,7 @@ export default function JournalPage() {
       <div className="min-h-screen flex flex-col justify-center items-center">
         { entriesVisible ? 
         <div className={`fixed top-0 min-h-screen w-full flex justify-center items-center z-20`}>
-          <EntriesPage uid={user?.id} dbDate={todayDbDate} fetchCount={fetchCount} 
+          <EntriesPage user={user} dbDate={todayDbDate} fetchCount={fetchCount} 
                       set_fetch_count={() => setFetchCount(prev => prev + 12)} 
                       on_close={on_entry_menu_close} on_entry_select={load_entry} 
           />
@@ -184,11 +175,12 @@ export default function JournalPage() {
   )
 }
 
-function useLoadedEntry(uid: string, dbDate: string) {
+function useLoadedEntry(user: User | null, dbDate: string) {
+  const uid = user?.id;
   const fetcher = (url: string) => fetch(url).then(r => r.json());  
 
   // load single single entry
-  const { data, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/`, fetcher,  {
+  const { data, error, isLoading } = useSWR(uid && dbDate ? `/api/entries/${uid}/${dbDate}/` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });

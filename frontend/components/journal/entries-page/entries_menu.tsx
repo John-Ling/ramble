@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react"
-import { X, FileText, ChevronsLeftRightEllipsis } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
+import { User } from "next-auth";
 
 
 interface ResponseData {
@@ -13,7 +14,7 @@ interface ResponseData {
 }
 
 interface EntriesPageProps {
-  uid: string;
+  user: User | null;
   dbDate: string;
   fetchCount: number;
   set_fetch_count: () => void;
@@ -21,10 +22,10 @@ interface EntriesPageProps {
   on_entry_select: (entry: JournalEntryReference) => void;
 }
 
-export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
+export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
   const [activeIndex, setActiveIndex] = useState<number>(0);
   const entryMenuRef = useRef<HTMLDivElement>(null);
-  const finalEntryRef = useRef<JournalEntryReference | null>(null);
+  // const finalEntryRef = useRef<JournalEntryReference | null>(null);
   const areDocumentsLeftRef = useRef<boolean>(false);
 
   let data: ResponseData | undefined = undefined;
@@ -63,7 +64,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
           break;
         case "Enter":
           event.preventDefault();
-          selectEntry(activeIndex);
+          selectEntry();
           break;
         default:
           break;
@@ -77,7 +78,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
     };
   });
 
-  function selectEntry(index: number) {
+  function selectEntry() {
     const entry: JournalEntryReference | undefined = entries[activeIndex];
     if (entry) {
       on_entry_select(entry);
@@ -101,13 +102,16 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
     
   useEffect(() => {
     entryMenuRef.current?.addEventListener("scroll", on_scroll);
+    const refCopy = entryMenuRef.current;
 
     return () => {
-      entryMenuRef.current?.removeEventListener("scroll", on_scroll);
+      if (refCopy) {
+        refCopy.removeEventListener("scroll", on_scroll);
+      } 
     }
   }, [on_scroll]);
 
-  const fetched = useEntries(uid, dbDate, fetchCount); 
+  const fetched = useEntries(user, dbDate, fetchCount); 
 
   if (!fetched) {
     console.log("Fetched is null");
@@ -131,7 +135,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
           <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
             {entries?.map((entry: JournalEntryReference, i: number) => {
               return (
-                <div key={i} onClick={() => selectEntry(i)} onMouseOver={() => setActiveIndex(i)}  
+                <div key={i} onClick={selectEntry} onMouseOver={() => setActiveIndex(i)}  
                   className={`hover:cursor-pointer flex flex-col items-center p-2 rounded-md ${ i === activeIndex ? "bg-chart-2 text-black" : ""}`}
                 >
                   <FileText size={48} />
@@ -149,11 +153,13 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   )
 }
 
-function useEntries(uid: string, dbDate: string, fetchCount: number) {
+function useEntries(user: User | null, dbDate: string, fetchCount: number) {
+  const uid = user?.id;
+
   const fetcher = (url: string) => fetch(url).then(r => r.json());
 
   // use mutate for more efficient pagination 
-  const { data, mutate, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/${fetchCount}`, fetcher,  {
+  const { data, mutate, error, isLoading } = useSWR(uid && dbDate && fetchCount ? `/api/entries/${uid}/${dbDate}/${fetchCount}` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });

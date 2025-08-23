@@ -1,6 +1,5 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
-import { v4 as uuidv4 } from 'uuid';
 
 interface RouteParameters {
     params: Promise<{ uid: string }>;
