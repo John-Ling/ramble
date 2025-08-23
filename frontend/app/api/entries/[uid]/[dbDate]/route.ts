@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     const token = await getToken({ req });
 
     try {
-        const response = await fetch(`http://localhost:8000/api/entries/${uid}/${dbDate}/`, {
+        const response = await fetch(`http://backend:8000/api/entries/${uid}/${dbDate}/`, {
             headers: {"Authorization": `Bearer ${token?.accessToken}`, "accept": "application/json"}
         });
     
@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
     const entry: JournalEntry = await req.json() as JournalEntry;
 
     // Try updating entry if it exists
-    let response = await fetch(`http://localhost:8000/api/entries/${uid}/${dbDate}/`, {
+    let response = await fetch(`http://backend:8000/api/entries/${uid}/${dbDate}/`, {
         method: "PUT",
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({"content": entry.content})
@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
 
     console.log("Sending request")
     // Entry does not exist so try create a new one 
-    response = await fetch(`http://localhost:8000/api/entries/${uid}`, {
+    response = await fetch(`http://backend:8000/api/entries/${uid}`, {
         method: "POST",
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({

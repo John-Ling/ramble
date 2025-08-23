@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: RouteParameters) {
     // console.log(file["file"]);
     const file = body.get("file") as File;
     const content = await file.text();
-    const response = await fetch(`http://localhost:8000/api/entries/${uid}/upload/`, {
+    const response = await fetch(`http://backend:8000/api/entries/${uid}/upload/`, {
         method: "POST",
         headers: {"Authorization": `Bearer ${token?.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({

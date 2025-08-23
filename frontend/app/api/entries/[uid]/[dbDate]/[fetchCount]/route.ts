@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
         return Response.json({"detail": "Could not find session"}, {"status": 500})
     }
 
-    const response = await fetch(`http://localhost:8000/api/entries/${uid}/${dbDate}/${fetchCount}/`, {
+    const response = await fetch(`http://backend:8000/api/entries/${uid}/${dbDate}/${fetchCount}/`, {
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json"}
     });
     if (response.ok) {

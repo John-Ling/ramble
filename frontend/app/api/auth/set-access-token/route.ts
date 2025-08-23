@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         return new Response("Next Auth secret can't be found", {status: 500});
     }
 
-    const response = await fetch("http://localhost:8000/api/auth/set-access-token/", {
+    const response = await fetch("http://backend:8000/api/auth/set-access-token/", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

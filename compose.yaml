@@ -2,4 +2,54 @@ services:
   redis:
     image: "redis:alpine"
     ports: 
-      - "8002:6379"
+      - "6379:6379"
+    networks:
+      - ramble-network
+    
+  backend:
+    env_file: "./backend/.env"
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    networks:
+      - ramble-network
+    depends_on:
+      - redis
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app
+          ignore:
+            - .venv/
+
+  frontend:
+    env_file: "./frontend/.env"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - ramble-network
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules/
+            - .next/
+
+networks:
+  ramble-network:
+    driver: bridge

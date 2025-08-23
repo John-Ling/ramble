@@ -21,9 +21,9 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 SECRET = os.getenv("AUTH_SECRET") # Same as NEXTAUTH_SECRET. Used for decrypting JWT
 ALGORITHM=os.getenv("AUTH_ALGORITHM")
 REDIS_URI = os.getenv("REDIS_URI")
-REDIS_PORT = os.getenv("REDIS_PORT")
-if REDIS_PORT is not None:
-    REDIS_PORT = int(REDIS_PORT)
+_REDIS_PORT = os.getenv("REDIS_PORT")
+if _REDIS_PORT is not None:
+    REDIS_PORT = int(_REDIS_PORT)
 else:
     REDIS_PORT = 8002
 
@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     try:
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
-        accessTokens = redis.Redis(host="172.17.0.1", port=8002, decode_responses=True)
+        accessTokens = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
         db = client["development"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
