@@ -6,7 +6,7 @@ import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 import { db_date_to_date, date_to_db_date } from "@/lib/utils";
 
-import { getSession, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useUser } from "@/hooks/useUser";
 
 import { Button } from "../ui/button";
@@ -14,17 +14,13 @@ import { Textarea } from "../ui/textarea";
 
 import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
-import { useTokenRefresh } from "@/hooks/useTokenRefresh";
-import { Container } from "lucide-react";
-
-import { useTheme } from "next-themes";
+import useSWR from "swr";
 
 export default function JournalPage() {
   console.log("RENDERING");
-  const { data: session, update } = useSession();
+  const { update } = useSession();
   const router = useRouter();
   const user = useUser();
-  // useTokenRefresh();
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
@@ -33,7 +29,6 @@ export default function JournalPage() {
   const [dbDate, setDbDate] = useState<string>(date_to_db_date(currentDate))
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [fetchCount, setFetchCount] = useState<number>(12);
@@ -51,13 +46,7 @@ export default function JournalPage() {
       update();
 
     }, 3300 * 1000);
-  }, [])
-
-  useEffect(() => {
-    // read and set theme from local storage
-    
-
-  })
+  }, []);
 
   // probably fix this later I don't know if this is a security 
   // vulnerability lmao
@@ -80,30 +69,6 @@ export default function JournalPage() {
     })
   }, [content, saved, pendingSave]);
 
-  const load_data = useCallback(async () => {
-    if (!user) {
-      return;
-    };
-    
-    setLoadingData(true);
-    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`);
-    if (response.status === 200) {
-      // set entry
-      const entry: JournalEntry = await response.json() as JournalEntry;
-      setContent(entry.content);
-      setSaved(entry.content);
-    } else {
-      setContent("");
-      setSaved("");
-    }
-
-    setLoadingData(false);
-  }, [user, dbDate])
-
-  useEffect(() => {
-    load_data();
-  }, [load_data]);
-
   async function save_without_delay() {
     if (!user || user.id === undefined) return;
 
@@ -112,7 +77,7 @@ export default function JournalPage() {
     
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
-    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -127,7 +92,7 @@ export default function JournalPage() {
     setPendingSave(false);
     const entry: JournalEntry = { created: dbDate, authorID: user.id, content: content };
 
-    const response = await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -165,6 +130,19 @@ export default function JournalPage() {
   //   document.body.setAttribute("data-theme", "gruvbox");
   // }
 
+  if (!user || !user.id) {
+    return null;
+  } 
+
+  const fetched = useLoadedEntry(user.id, todayDbDate);
+
+  useEffect(() => {
+    if (fetched.data) {
+      const entry = fetched.data as JournalEntry;
+      setContent(entry.content);
+      setSaved(entry.content);
+    }
+  }, [fetched.data]);
 
   return (
     <ProtectedRoute>
@@ -195,8 +173,8 @@ export default function JournalPage() {
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
-                    disabled={loadingData || readOnly} 
-                    placeholder={`${loadingData ? "Loading..." : "What's on your mind?"}`}  
+                    disabled={fetched.isLoading || readOnly} 
+                    placeholder={`${fetched.isLoading ? "Loading..." : "What's on your mind?"}`}  
                     className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
                     ref={textareaRef}/>  
@@ -204,4 +182,16 @@ export default function JournalPage() {
       </div> 
     </ProtectedRoute>
   )
+}
+
+function useLoadedEntry(uid: string, dbDate: string) {
+  const fetcher = (url: string) => fetch(url).then(r => r.json());  
+
+  // load single single entry
+  const { data, error, isLoading } = useSWR(`/api/entries/${uid}/${dbDate}/`, fetcher,  {
+    dedupingInterval: 5000,
+    revalidateOnFocus: false
+  });
+
+  return { data: data, error, isLoading };
 }

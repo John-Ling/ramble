@@ -13,7 +13,7 @@ interface ResponseData {
 }
 
 interface EntriesPageProps {
-  uid: string | undefined;
+  uid: string;
   dbDate: string;
   fetchCount: number;
   set_fetch_count: () => void;
@@ -108,10 +108,12 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   }, [on_scroll]);
 
   const fetched = useEntries(uid, dbDate, fetchCount); 
+
   if (!fetched) {
     console.log("Fetched is null");
     return null;
   };
+
   data = fetched?.data;
   console.log("DATA ", data);
   entries = data?.entries;
@@ -147,12 +149,7 @@ export default function EntriesPage({uid, dbDate, fetchCount, set_fetch_count, o
   )
 }
 
-function useEntries(uid: string | undefined, dbDate: string, fetchCount: number) {
-  if (!uid) {
-    return null;
-  }
-
-  console.log("GETTING ENTRIES");
+function useEntries(uid: string, dbDate: string, fetchCount: number) {
   const fetcher = (url: string) => fetch(url).then(r => r.json());
 
   // use mutate for more efficient pagination 
