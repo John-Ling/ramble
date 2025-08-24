@@ -20,12 +20,11 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 SECRET = os.getenv("AUTH_SECRET") # Same as NEXTAUTH_SECRET. Used for decrypting JWT
 ALGORITHM=os.getenv("AUTH_ALGORITHM")
-REDIS_URI = os.getenv("REDIS_URI")
 _REDIS_PORT = os.getenv("REDIS_PORT")
 if _REDIS_PORT is not None:
     REDIS_PORT = int(_REDIS_PORT)
 else:
-    REDIS_PORT = 8002
+    REDIS_PORT = 6379
 
 db = None
 accessTokens: redis.Redis | None = None # startup redis using docker
