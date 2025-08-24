@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
@@ -125,7 +124,7 @@ export default function JournalPage() {
   //   document.body.setAttribute("data-theme", "gruvbox");
   // }
 
-  const fetched = useLoadedEntry(user, todayDbDate);
+  let fetched = useLoadedEntry(user, dbDate);
 
   useEffect(() => {
     if (fetched.data) {
@@ -134,6 +133,10 @@ export default function JournalPage() {
       setSaved(entry.content);
     }
   }, [fetched.data]);
+
+  useEffect(() => {
+    fetched.mutate();
+  }, [dbDate]);
 
   return (
     <ProtectedRoute>
@@ -160,7 +163,7 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{db_date_to_date(dbDate)}</h1>
+            <h1 className="p-2">{fetched.isLoading ? "Loading..." : db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
@@ -180,10 +183,10 @@ function useLoadedEntry(user: User | null, dbDate: string) {
   const fetcher = (url: string) => fetch(url).then(r => r.json());  
 
   // load single single entry
-  const { data, error, isLoading } = useSWR(uid && dbDate ? `/api/entries/${uid}/${dbDate}/` : null, fetcher,  {
+  const { data, error, isLoading , mutate,} = useSWR(uid && dbDate ? `/api/entries/${uid}/${dbDate}/` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });
 
-  return { data: data, error, isLoading };
+  return { data: data, error, isLoading, mutate };
 }
