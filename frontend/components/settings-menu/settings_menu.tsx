@@ -8,13 +8,14 @@ import { Settings } from "lucide-react"
 import { LogOut } from "lucide-react"
 
 interface SettingsMenuProps {
-  onEntries?: () => void;
-  onPrefs?: () => void;
-  onLogout?: () => void;
+  on_entries?: () => void;
+  on_prefs?: () => void;
+  on_logout?: () => void;
+  on_dashboard?: () => void;
   disabled: boolean;
 }
 
-export default function SettingsMenu({onEntries = undefined, onPrefs = undefined, onLogout = undefined, disabled}: SettingsMenuProps) {
+export default function SettingsMenu({on_entries = undefined, on_prefs = undefined, on_logout = undefined, on_dashboard = undefined, disabled}: SettingsMenuProps) {
   return (
     <>
       <DropdownMenu>
@@ -22,11 +23,11 @@ export default function SettingsMenu({onEntries = undefined, onPrefs = undefined
           <Settings />
         </DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem disabled={!onEntries} onClick={onEntries}>Select Entry</DropdownMenuItem>
-          <DropdownMenuItem disabled={true}>Dashboard</DropdownMenuItem>
+          <DropdownMenuItem disabled={!on_entries} onClick={on_entries}>Select Entry</DropdownMenuItem>
+          <DropdownMenuItem disabled={!on_dashboard} onClick={on_dashboard}>Dashboard</DropdownMenuItem>
           <DropdownMenuItem disabled={true}>Conversation Mode</DropdownMenuItem>
-          <DropdownMenuItem disabled={!onPrefs} onClick={onPrefs}>Preferences</DropdownMenuItem>
-          <DropdownMenuItem disabled={!onLogout} onClick={onLogout}><LogOut /> Log Out</DropdownMenuItem>
+          <DropdownMenuItem disabled={!on_prefs} onClick={on_prefs}>Preferences</DropdownMenuItem>
+          <DropdownMenuItem disabled={!on_logout} onClick={on_logout}><LogOut /> Log Out</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>

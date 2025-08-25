@@ -17,7 +17,6 @@ import useSWR from "swr";
 import { User } from "next-auth";
 
 export default function JournalPage() {
-  console.log("RENDERING");
   const { update } = useSession();
   const router = useRouter();
   const user = useUser();
@@ -104,6 +103,7 @@ export default function JournalPage() {
     setDbDate(entry.created);
   }
 
+  
   const on_entry_menu_close = () => {
     setEntriesVisible(false);
     textareaRef.current?.focus();
@@ -117,6 +117,11 @@ export default function JournalPage() {
 
   const on_entry = () => {
     setEntriesVisible(true);
+    return;
+  }
+
+  const on_dashboard = () => {
+    router.push("/dashboard");
     return;
   }
 
@@ -155,9 +160,10 @@ export default function JournalPage() {
           <div className="flex w-full lg:w-3/4 justify-between">
             <h1 className="font-bold text-2xl">RAMBLE</h1>
             <SettingsMenu disabled={entriesVisible} 
-                          onEntries={on_entry} 
-                          onPrefs={on_pref}
-                          onLogout={signOut}/>
+                          on_entries={on_entry} 
+                          on_prefs={on_pref}
+                          on_logout={signOut}
+                          on_dashboard={on_dashboard}/>
           </div>
         </div>
         {/* journal form */}

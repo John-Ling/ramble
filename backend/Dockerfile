@@ -1,15 +1,14 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock ./
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    musl-dev \
     python3-dev \
-    krb5-dev \
-    && rm -rf /var/cache/apk/*
+    libkrb5-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN /bin/uv sync --frozen --no-dev
 COPY . ./

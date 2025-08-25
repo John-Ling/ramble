@@ -19,7 +19,6 @@ load_dotenv()
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 SECRET = os.getenv("AUTH_SECRET") # Same as NEXTAUTH_SECRET. Used for decrypting JWT
-ALGORITHM=os.getenv("AUTH_ALGORITHM")
 _REDIS_PORT = os.getenv("REDIS_PORT")
 if _REDIS_PORT is not None:
     REDIS_PORT = int(_REDIS_PORT)
@@ -45,10 +44,12 @@ async def lifespan(app: FastAPI):
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
         accessTokens = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
-        db = client["development"]
+        db = client["prod"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
 
+        if entryCollection is None:
+            raise ValueError
         # Create indexes for composite keys on entries
         await entryCollection.create_index([("authorID", ASCENDING), ("created", ASCENDING)], unique=True)
     except Exception as e:
@@ -191,6 +192,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
     
     # Insert actual entry into database
 
+
     if await _insert_entry(entry) is not None:
         return {"message": "Everything done :)"}
 
@@ -221,6 +223,8 @@ async def _insert_entry(entry: JournalEntry):
     if existingEntry is not None:
         return None
 
+    # do emotion processing here
+    
     await entryCollection.insert_one(entryDict)
     return { "message": "Wrote document" }
 
@@ -370,6 +374,9 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
     if len(writeEntry) >= 1:
         # at least one field needs to be updated
         # update entries collection
+
+        # add code for processing emotions here
+
         updateResult = await entryCollection.find_one_and_update({"authorID": uid, "created": dbDate}, {"$set": writeEntry})
         if updateResult is not None:
             return { "message": "yippie"}
