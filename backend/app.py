@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo import ASCENDING
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
+from transformers import pipeline, AutoTokenizer
+
 from dotenv import load_dotenv
 import httpx
 import os
@@ -13,10 +15,12 @@ import redis
 import json
 import logging
 
+import emotional_analytics
 from _types import *
 
 load_dotenv()
 
+ANALYTICS_MODEL_NAME="monologg/bert-base-cased-goemotions-original"
 MONGODB_URI = os.getenv("MONGODB_URI")
 SECRET = os.getenv("AUTH_SECRET") # Same as NEXTAUTH_SECRET. Used for decrypting JWT
 _REDIS_PORT = os.getenv("REDIS_PORT")
@@ -26,11 +30,14 @@ else:
     REDIS_PORT = 6379
 
 db = None
-accessTokens: redis.Redis | None = None # startup redis using docker
+redisStore: redis.Redis | None = None # startup redis using docker
 oauth2Scheme = OAuth2PasswordBearer(tokenUrl="token")
 bearerScheme = HTTPBearer()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+classifier = None
+tokeniser = None
+
 
 userCollection: AsyncIOMotorCollection | None = None
 entryCollection: AsyncIOMotorCollection | None = None
@@ -38,15 +45,18 @@ collection:  AsyncIOMotorCollection | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db, userCollection, entryCollection, accessTokens
+    global db, userCollection, entryCollection, redisStore, classifier, tokeniser
     
     try:
         # Startup code
         client = AsyncIOMotorClient(MONGODB_URI)
-        accessTokens = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
+        redisStore = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
         db = client["prod"]
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
+
+        classifier = pipeline(task="text-classification", model=ANALYTICS_MODEL_NAME, top_k=None)
+        tokeniser = AutoTokenizer.from_pretrained(ANALYTICS_MODEL_NAME)
 
         if entryCollection is None:
             raise ValueError
@@ -76,7 +86,7 @@ app.add_middleware(
 
 # probably refactor into a decorator
 async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if accessTokens is None:
+    if redisStore is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Redis is not running"
@@ -84,15 +94,15 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
     
     accessToken = credentials.credentials
     logger.info(accessToken)
-    logger.info(accessTokens.get(uid))
+    logger.info(redisStore.get(uid))
 
-    if accessTokens.get(uid) == None:
+    if redisStore.get(uid) == None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User does not exist"
         )
     
-    if accessTokens.get(uid) != accessToken:
+    if redisStore.get(uid) != accessToken:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="You are not authorised"
@@ -101,7 +111,7 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
 
 @app.post("/api/auth/set-access-token/", status_code=status.HTTP_201_CREATED)
 async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if accessTokens is None:
+    if redisStore is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Redis is not running"
@@ -120,16 +130,16 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
         )
 
     logger.info("Setting access token")
-    prev = accessTokens.get(sub)
-    accessTokens.set(sub, token)
+    prev = redisStore.get(sub)
+    redisStore.set(sub, token)
 
-    logger.info(f"Changed access token {prev} for UID {sub} to {accessTokens.get(sub)}")
+    logger.info(f"Changed access token {prev} for UID {sub} to {redisStore.get(sub)}")
 
     return {"message": "Added token"}
 
 @app.get("/api/auth/access-token/{uid}/", status_code=status.HTTP_200_OK)
 async def get_access_token(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if accessTokens is None:
+    if redisStore is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Redis is not running"
@@ -145,7 +155,7 @@ async def get_access_token(uid: str, credentials: HTTPAuthorizationCredentials =
 
     logger.info("Getting access token")
     logger.info(uid)
-    token = accessTokens.get(uid)
+    token = redisStore.get(uid)
     logger.info(token)
 
     return JSONResponse(content=token)
@@ -191,8 +201,6 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
         await userCollection.insert_one(newUser)
     
     # Insert actual entry into database
-
-
     if await _insert_entry(entry) is not None:
         return {"message": "Everything done :)"}
 
@@ -224,6 +232,8 @@ async def _insert_entry(entry: JournalEntry):
         return None
 
     # do emotion processing here
+
+    logger.info("PROCESSING EMOTIONS")
     
     await entryCollection.insert_one(entryDict)
     return { "message": "Wrote document" }
@@ -376,6 +386,7 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         # update entries collection
 
         # add code for processing emotions here
+        logger.info("PROCESSING EMOTIONS")
 
         updateResult = await entryCollection.find_one_and_update({"authorID": uid, "created": dbDate}, {"$set": writeEntry})
         if updateResult is not None:
