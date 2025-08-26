@@ -1,9 +1,10 @@
-from app import logger
+from app import logger, emotionCollection
 
 """
 Functions for extracting emotion scores 
 for use with emotional analytics page
 """
+
 
 def calculate_emotion_scores(chunks, classifier):
     emotionScores = {}

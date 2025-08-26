@@ -41,6 +41,7 @@ tokeniser = None
 
 userCollection: AsyncIOMotorCollection | None = None
 entryCollection: AsyncIOMotorCollection | None = None
+emotionCollection: AsyncIOMotorCollection | None = None
 collection:  AsyncIOMotorCollection | None = None
 
 @asynccontextmanager
@@ -49,12 +50,19 @@ async def lifespan(app: FastAPI):
     
     try:
         # Startup code
+        logger.info("Connecting to MongoDB")
         client = AsyncIOMotorClient(MONGODB_URI)
+        logger.info("Connecting to Redis")
         redisStore = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
+
+        logger.info("Getting collections")
         db = client["prod"]
+
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
+        emotionCollection = db.get_collection("emotion-data")
 
+        logger.info("Initialising classifier and tokeniser")
         classifier = pipeline(task="text-classification", model=ANALYTICS_MODEL_NAME, top_k=None)
         tokeniser = AutoTokenizer.from_pretrained(ANALYTICS_MODEL_NAME)
 
@@ -232,6 +240,9 @@ async def _insert_entry(entry: JournalEntry):
         return None
 
     # do emotion processing here
+    chunks = emotional_analytics.generate_chunks(entryDict["content"], tokeniser)
+    scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
+    logger.info(scores);
 
     logger.info("PROCESSING EMOTIONS")
     
@@ -387,6 +398,10 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
 
         # add code for processing emotions here
         logger.info("PROCESSING EMOTIONS")
+
+        chunks = emotional_analytics.generate_chunks(writeEntry["content"], tokeniser)
+        scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
+        logger.info(scores);
 
         updateResult = await entryCollection.find_one_and_update({"authorID": uid, "created": dbDate}, {"$set": writeEntry})
         if updateResult is not None:
