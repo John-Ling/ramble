@@ -1,5 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
+import { v4 as uuidv4 } from 'uuid';
 
 interface RouteParameters {
     params: Promise<{ uid: string }>;
@@ -14,14 +15,17 @@ export async function POST(req: NextRequest, { params }: RouteParameters) {
     // const file = Object.fromEntries(body.entries());
     // console.log(file["file"]);
     const file = body.get("file") as File;
+    const filename = body.get("name");
     const content = await file.text();
+    const createdOn = body.get("createdOn");
     const response = await fetch(`http://backend:8000/api/entries/${uid}/upload/`, {
         method: "POST",
         headers: {"Authorization": `Bearer ${token?.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({
-            _id: file.name, // this assumes the file name has been formatted correctly change this later
+            _id: uuidv4() + uid,
             authorID: uid,
-            created: file.name,
+            name: filename,
+            createdOn: createdOn,
             content: content
         })
     });

@@ -92,6 +92,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/walao")
+async def reset():
+    # pls pls pls remove this in production
+    await entryCollection.delete_many({})
+    await userCollection.delete_many({})
+    return {"walao": "completed"}
+
+
 # probably refactor into a decorator
 async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     if redisStore is None:
@@ -145,31 +153,8 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
 
     return {"message": "Added token"}
 
-@app.get("/api/auth/access-token/{uid}/", status_code=status.HTTP_200_OK)
-async def get_access_token(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if redisStore is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Redis is not running"
-        )
-    
-    adminSecret = credentials.credentials
-    if adminSecret != os.getenv("ADMIN_SECRET"):
-        logger.info("Attempt to get access token denied")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Nice try dumbass"
-        )
-
-    logger.info("Getting access token")
-    logger.info(uid)
-    token = redisStore.get(uid)
-    logger.info(token)
-
-    return JSONResponse(content=token)
-
 @app.post("/api/entries/{uid}/", status_code=status.HTTP_201_CREATED)
-async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Takes the schema for a journal entry and creates both a reference and entry
     The reference is inserted into the user's entries
@@ -185,9 +170,9 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
     await check_auth(uid, credentials)
     
     user = await userCollection.find_one({"_id": uid})
-    entryDict = entry.model_dump(by_alias=True)
+    body = entry.model_dump(by_alias=True)
 
-    if (entryDict["created"] == "" or entryDict["_id"] == "" or entryDict["authorID"] == ""):
+    if (body["createdOn"] == "" or body["_id"] == "" or body["authorID"] == ""):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Malformed request"
@@ -195,25 +180,32 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntry 
     
     # Insert entry reference
     entryReference: JournalEntryReference = JournalEntryReference() 
-    entryReference.id = entryDict["created"]
-    entryReference.created = entryDict["created"]
+    entryReference.id = body["_id"]
+    entryReference.createdOn = body["createdOn"]
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
+    # update user collection
     if user is not None:
         await userCollection.update_one({"_id": uid}, {"$push": {"entries": entryReferenceDict}})
     else:
+        # create new user
         newUser = {
             "_id": uid,
             "entries": [entryReferenceDict]
         }
         await userCollection.insert_one(newUser)
     
+
+    insertEntry: JournalEntry = JournalEntry()
+    insertEntry.id = body["_id"]
+    insertEntry.content = body["content"]
     # Insert actual entry into database
-    if await _insert_entry(entry) is not None:
+    # update entry collection
+    if await _insert_entry(insertEntry) is not None:
         return {"message": "Everything done :)"}
 
-    # roll back change
-    print("Rollback")
+    # roll back change if there is an error
+    logger.error("walao rolling back")
     # Rollback transaction and remove entry reference
     if user is not None:
         await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})
@@ -234,7 +226,7 @@ async def _insert_entry(entry: JournalEntry):
 
     entryDict = entry.model_dump(by_alias=True)    
 
-    existingEntry = await entryCollection.find_one({"authorID": entryDict["authorID"], "created": entryDict["created"]})
+    existingEntry = await entryCollection.find_one({"_id": entryDict["_id"]})
 
     if existingEntry is not None:
         return None
@@ -254,7 +246,6 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
         {"$match": {"_id": uid}},
         {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
         {
-            # Convert entries created attribute into valid dates for comparisons
             "$addFields": {
                 "entries._dateCreated": {
                     "$dateFromString": { "dateString": "$entries._id" }
@@ -370,7 +361,7 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
         )
 
     await check_auth(uid, credentials)
-
+ 
     entry = await _get_entry(uid, dbDate)
     if entry is not None:
         return JSONResponse(content=entry)
@@ -415,7 +406,15 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
 async def upload_entry(uid: str, entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     await check_auth(uid, credentials)
 
+    body = entry.model_dump(by_alias=True)
+
+    # create a journal entry 
+    entry = JournalEntry()
+    entry.content = body["content"]
+    entry.id = entry["_id"]
+
     entryDict = entry.model_dump(by_alias=True)
+
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=entryDict, 

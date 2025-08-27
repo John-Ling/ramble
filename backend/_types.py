@@ -1,20 +1,25 @@
 from pydantic import BaseModel, BeforeValidator, Field
 from typing import Optional, Annotated, List
 
-
 PyObjectId = Annotated[str, BeforeValidator(str)]
+
+class JournalEntryReqBody(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    authorID: str = ""
+    name: str = ""
+    createdOn: str = ""
+    favourite: bool = False
+    content: str = ""
 
 class JournalEntryReference(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    created: str = ""
+    authorID: str = ""
+    createdOn: str = ""
     name: str = ""
     favourite: bool = False
 
-# Maybe change to journal entry content later
 class JournalEntry(BaseModel):
-    id:  Optional[PyObjectId] = Field(alias="_id", default=None) 
-    authorID: PyObjectId
-    created: PyObjectId
+    id: Optional[PyObjectId] = Field(alias="_id", default=None) 
     content: str = ""
 
 class UpdateJournalEntry(BaseModel):
@@ -61,4 +66,4 @@ class JournalEntryEmotionData(BaseModel):
     relief: float = Field(default_factory=0.0)
     remorse: float = Field(default_factory=0.0)
     sadness: float = Field(default_factory=0.0)
-    surprise: float = Field(default_factory=0.0)
+    surprise: float = Field(default_factory=0.0)    

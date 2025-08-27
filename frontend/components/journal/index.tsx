@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
+import VoiceRecorder from "./recorder/voice_recorder";
 import { db_date_to_date, date_to_db_date } from "@/lib/utils";
 
 import { signOut, useSession } from "next-auth/react";
@@ -172,6 +173,7 @@ export default function JournalPage() {
             <h1 className="p-2">{fetched.isLoading ? "Loading..." : db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
+          <VoiceRecorder />
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={fetched.isLoading || readOnly} 
                     placeholder={`${fetched.isLoading ? "Loading..." : "What's on your mind?"}`}  

@@ -1,14 +1,15 @@
 "use client";
+import { date_to_db_date } from "@/lib/utils";
 import { FileText} from "lucide-react"
 import React, { useState, useRef } from "react";
+import { v4 as uuidv4 } from 'uuid';
 
 interface FileItem {
-  id: number;
   file: File;
   name: string;
   size: number;
   type: string;
-  createdOn: number;
+  createdOn: string;
 }
 
 interface FileUploadProps {
@@ -25,9 +26,13 @@ export default function FileUpload({ uid }: FileUploadProps) {
 
   async function upload_file(file: FileItem) {
 
-    const formData = new FormData();    
+    const formData = new FormData(); 
     formData.append("file", file.file);
+    formData.append("name", file.name);
 
+    const createdOn = new Intl.DateTimeFormat("en-US").format(new Date()).replaceAll('/', '-');
+    formData.append("createdOn", createdOn);
+    
     if (!uid) {
       console.log("UID is null");
       return;
@@ -68,8 +73,13 @@ export default function FileUpload({ uid }: FileUploadProps) {
     setUploadStatus("uploading");
     const droppedFiles = Array.from(e.dataTransfer.files);
     const uploadFiles: FileItem[] = [];
+
+    // format name
+    
+
     droppedFiles.forEach((file: File) => {
-      uploadFiles.push({id: Date.now() + Math.random(), file: file, name: file.name, size: file.size, type: file.type} as FileItem);
+      const formattedName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      uploadFiles.push({ file: file, name: formattedName, size: file.size, type: file.type} as FileItem);
     })
     await upload_files(uploadFiles);
     setUploadStatus("idle");
