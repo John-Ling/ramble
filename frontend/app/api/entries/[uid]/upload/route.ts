@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: RouteParameters) {
             name: filename,
             createdOn: createdOn,
             content: content
-        })
+        } as JournalEntryReqBody)
     });
 
     if (response.ok) {

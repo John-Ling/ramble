@@ -30,9 +30,10 @@ export default function FileUpload({ uid }: FileUploadProps) {
     formData.append("file", file.file);
     formData.append("name", file.name);
 
+
     const createdOn = new Intl.DateTimeFormat("en-US").format(new Date()).replaceAll('/', '-');
     formData.append("createdOn", createdOn);
-    
+
     if (!uid) {
       console.log("UID is null");
       return;

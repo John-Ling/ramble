@@ -154,7 +154,7 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
     return {"message": "Added token"}
 
 @app.post("/api/entries/{uid}/", status_code=status.HTTP_201_CREATED)
-async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = False, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Takes the schema for a journal entry and creates both a reference and entry
     The reference is inserted into the user's entries
@@ -217,7 +217,10 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
     logger.error("walao rolling back")
     # Rollback transaction and remove entry reference
     if user is not None:
-        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": -1}})
+        order = -1
+        if viaUpload:
+            order = 1
+        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": order}})
     else:
         await userCollection.find_one_and_delete({"_id": uid})
     
@@ -423,21 +426,13 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         )
 
 @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
-async def upload_entry(uid: str, entry: JournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     await check_auth(uid, credentials)
 
     body = entry.model_dump(by_alias=True)
-
-    # create a journal entry 
-    entry = JournalEntry()
-    entry.content = body["content"]
-    entry.id = entry["_id"]
-
-    entryDict = entry.model_dump(by_alias=True)
-
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=entryDict, 
+            response = await client.post(f"http://localhost:8000/api/entries/{uid}/?viaUpload=true", json=body, 
                                         headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
             response.raise_for_status()
             return {"message": "Uploaded file"}

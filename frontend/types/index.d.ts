@@ -10,3 +10,11 @@ interface JournalEntryReference {
     createdOn: string;
     favourite: boolean;
 }
+
+interface JournalEntryReqBody {
+    _id: string;
+    name: string | null;
+    authorID: string;
+    createdOn: string;
+    content: string;
+}
