@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
         if entryCollection is None:
             raise ValueError
         # Create indexes for composite keys on entries
-        await entryCollection.create_index([("authorID", ASCENDING), ("created", ASCENDING)], unique=True)
+        # await entryCollection.create_index([("authorID", ASCENDING), ("created", ASCENDING)], unique=True)
     except Exception as e:
         print(e)
     yield
@@ -185,20 +185,29 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
     # update user collection
-    if user is not None:
-        await userCollection.update_one({"_id": uid}, {"$push": {"entries": entryReferenceDict}})
-    else:
+    if user is None:
         # create new user
         newUser = {
             "_id": uid,
             "entries": [entryReferenceDict]
         }
         await userCollection.insert_one(newUser)
+    else:
+        await userCollection.update_one({"_id": uid}, 
+                                            {"$push": {
+                                                "entries": {
+                                                    "$each": [entryReferenceDict],
+                                                    "$position": 0
+                                                    }
+                                                }
+                                            }
+                                        )
     
 
     insertEntry: JournalEntry = JournalEntry()
     insertEntry.id = body["_id"]
     insertEntry.content = body["content"]
+
     # Insert actual entry into database
     # update entry collection
     if await _insert_entry(insertEntry) is not None:
@@ -208,7 +217,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
     logger.error("walao rolling back")
     # Rollback transaction and remove entry reference
     if user is not None:
-        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": 1}})
+        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": -1}})
     else:
         await userCollection.find_one_and_delete({"_id": uid})
     
@@ -226,9 +235,12 @@ async def _insert_entry(entry: JournalEntry):
 
     entryDict = entry.model_dump(by_alias=True)    
 
+    logger.info("INSERTING INTO TABLE")
+    logger.info(entryDict["_id"])
     existingEntry = await entryCollection.find_one({"_id": entryDict["_id"]})
 
     if existingEntry is not None:
+        logger.info("ENTRY ALREADY EXISTS")
         return None
 
     # do emotion processing here
@@ -361,6 +373,14 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
         )
 
     await check_auth(uid, credentials)
+
+    # get uuid for entry
+    entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
+    uuid = entryReference.id
+
+    # search db for content using uuid
+
+    # await 
  
     entry = await _get_entry(uid, dbDate)
     if entry is not None:

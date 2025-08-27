@@ -4,7 +4,7 @@ from typing import Optional, Annotated, List
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class JournalEntryReqBody(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: Optional[PyObjectId] = Field(alias="_id", default=None) # consists of user's id + a unique uuid
     authorID: str = ""
     name: str = ""
     createdOn: str = ""
