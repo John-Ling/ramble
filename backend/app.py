@@ -155,7 +155,7 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
     return {"message": "Added token"}
 
 @app.post("/api/entries/{uid}/", status_code=status.HTTP_201_CREATED)
-async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = False, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Takes the schema for a journal entry and creates both a reference and entry
     The reference is inserted into the user's entries
@@ -181,8 +181,12 @@ async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = Fa
     
     # Insert entry reference
     entryReference: JournalEntryReference = JournalEntryReference() 
-    entryReference.id = uuid.uuid4() + body["authorID"]
+
+    generatedID = str(uuid.uuid4())
+    entryReference.id = generatedID + body["authorID"]
     entryReference.createdOn = body["createdOn"]
+    entryReference.name = body["name"]
+
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
     # update user collection
@@ -206,7 +210,7 @@ async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = Fa
     
 
     insertEntry: JournalEntry = JournalEntry()
-    insertEntry.id = uuid.uuid4() + body["authorID"]
+    insertEntry.id = generatedID + body["authorID"]
     insertEntry.content = body["content"]
 
     # Insert actual entry into database
@@ -218,10 +222,7 @@ async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = Fa
     logger.error("walao rolling back")
     # Rollback transaction and remove entry reference
     if user is not None:
-        order = -1
-        if viaUpload:
-            order = 1
-        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": order}})
+        await userCollection.update_one({"_id": uid}, {"$pop": {"entries": -1}})
     else:
         await userCollection.find_one_and_delete({"_id": uid})
     
@@ -312,8 +313,27 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         )
 
     try:
+    
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User does not exist"
+            )
+        
+        mostRecentEntry = user["entries"][0]
+    
+        firstEntry = JournalEntryReference()
+
+        if mostRecentEntry["createdOn"] != dbDate:
+            logger.info("MISMATCH")
+            # create dummy entry 
+            firstEntry.createdOn = dbDate
+            return None
+        else:
+            pass
+
         firstEntry = await _get_entry(uid, dbDate)
-        print(firstEntry)
+        logger.info(firstEntry)
 
         if firstEntry is None:
             # create dummy entry
@@ -339,8 +359,8 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         else: 
             # remove final entry and keep track of it 
             finalEntry = entries.pop()
-            print(finalEntry)
-            print(finalEntry["_id"])
+            logger.info(finalEntry)
+            logger.info(finalEntry["_id"])
             if finalEntry and finalEntry["_id"]:
                 (entriesLeft, _) = await get_entries_before(uid, finalEntry["_id"], fetchCount=1)
                 if entriesLeft:
@@ -353,20 +373,21 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             detail=f"Error: {e}"
         )
 
-async def _get_entry(uuid: str):
+async def _get_entry(id: str):
     if entryCollection is None:
         return None
 
-    entry = await entryCollection.find_one({"_id": uuid})
+    logger.info("Searching for ", id)
+    entry = await entryCollection.find_one({"_id": id})
     if entry is not None:
         return entry
 
     return None
 
-@app.get("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
-async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+@app.get("/api/entries/{uid}/{entryName}/", status_code=status.HTTP_200_OK)
+async def get_entry(uid: str, entryName: str, response: Response, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
-    Returns a journal entry for a specific user and dbDate
+    Given a entry name (assumed to be unique) return an entry
     Returns 200 if entry exists and 204 if it does not
     """
 
@@ -382,29 +403,30 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
     # entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
 
     logger.info("Getting most recent entry")
-    
-    # get front of user's entries which should be the most recent
-    # then check if the id matches
-    user = await userCollection.find_one({"_id": uid},  {"entries": {"$slice": 1}}) 
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="User does not exist"
-        )
-    
-    mostRecentEntry = user["entries"][0]
-    
-    if mostRecentEntry["createdOn"] != dbDate:
-        logger.info("MISMATCH")
-        return None
-    
 
-    logger.info("GETTING CONTENT")
-    # otherwise return the entry at the id
-    uuid = mostRecentEntry["_id"]
+    # try get most recent entry with specific entry name
+    foundEntry = await userCollection.aggregate([
+        {"$match": {"_id": uid}},
+        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+        {
+            "$match": {
+                "entries.name": entryName
+            }
+        },
+        {"$limit": 1}
+    ]).to_list(1)
+
+    if foundEntry == []:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return None
+
+    logger.info(foundEntry)
     
-    # search db for content using uuid 
-    entry = await _get_entry(uuid)
+    entryUUID = str(foundEntry[0]["entries"]["_id"])
+    logger.info(entryUUID)
+
+    # # search db for content using uuid 
+    entry = await _get_entry(entryUUID)
     if entry is not None:
         logger.info("FOUND CONTENT")
         return JSONResponse(content=entry)
@@ -412,8 +434,8 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
     response.status_code = status.HTTP_404_NOT_FOUND
     return None
 
-@app.put("/api/entries/{uid}/{dbDate}/", status_code=status.HTTP_200_OK)
-async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+@app.put("/api/entries/{uid}/{entryName}/", status_code=status.HTTP_200_OK)
+async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     if entryCollection is None or userCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -439,18 +461,20 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
         logger.info(scores);
 
-        # get uuid to update 
+        # get uuid to update
+        foundEntry = await userCollection.aggregate([
+            {"$match": {"_id": uid}},
+            {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+            {
+                "$match": {
+                    "entries.name": entryName
+                }
+            },
+            {"$limit": 1}
+        ]).to_list(1)
+        entryUUID = str(foundEntry[0]["entries"]["_id"])        
 
-        user = await userCollection.find_one({"_id": uid},  {"entries": {"$slice": 1}}) 
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User does not exist"
-            )
-        mostRecentEntry = user["entries"][0]
-        uuid = mostRecentEntry["_id"]
-
-        updateResult = await entryCollection.find_one_and_update({"_id": uuid}, {"$set": writeEntry})
+        updateResult = await entryCollection.find_one_and_update({"_id": entryUUID}, {"$set": writeEntry})
         if updateResult is not None:
             return { "message": "yippie"}
         raise HTTPException(
@@ -465,7 +489,7 @@ async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credent
     body = entry.model_dump(by_alias=True)
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"http://localhost:8000/api/entries/{uid}/?viaUpload=true", json=body, 
+            response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=body, 
                                         headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
             response.raise_for_status()
             return {"message": "Uploaded file"}

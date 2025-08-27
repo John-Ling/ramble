@@ -6,7 +6,7 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 class JournalEntryReqBody(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None) # consists of user's id + a unique uuid
     authorID: str = ""
-    name: str = ""
+    name: str = "" # assume name is unique
     createdOn: str = ""
     favourite: bool = False
     content: str = ""
