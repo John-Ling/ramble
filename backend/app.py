@@ -13,6 +13,7 @@ import os
 import uvicorn
 import redis
 import json
+import uuid
 import logging
 
 import emotional_analytics
@@ -180,7 +181,7 @@ async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = Fa
     
     # Insert entry reference
     entryReference: JournalEntryReference = JournalEntryReference() 
-    entryReference.id = body["_id"]
+    entryReference.id = uuid.uuid4() + body["authorID"]
     entryReference.createdOn = body["createdOn"]
     entryReferenceDict = entryReference.model_dump(by_alias=True)
 
@@ -205,7 +206,7 @@ async def create_entry_reference_and_insert_entry(uid: str, viaUpload: bool = Fa
     
 
     insertEntry: JournalEntry = JournalEntry()
-    insertEntry.id = body["_id"]
+    insertEntry.id = uuid.uuid4() + body["authorID"]
     insertEntry.content = body["content"]
 
     # Insert actual entry into database
@@ -352,11 +353,11 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             detail=f"Error: {e}"
         )
 
-async def _get_entry(uid: str, dbDate: str):
+async def _get_entry(uuid: str):
     if entryCollection is None:
         return None
 
-    entry = await entryCollection.find_one({"authorID": uid, "created": dbDate})
+    entry = await entryCollection.find_one({"_id": uuid})
     if entry is not None:
         return entry
 
@@ -369,24 +370,43 @@ async def get_entry(uid: str, dbDate: str, response: Response, credentials: HTTP
     Returns 200 if entry exists and 204 if it does not
     """
 
-    if entryCollection is None:
+    if userCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Entry collection is Null"
+            detail="User collection is Null"
         )
 
     await check_auth(uid, credentials)
 
     # get uuid for entry
-    entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
-    uuid = entryReference.id
+    # entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
 
-    # search db for content using uuid
+    logger.info("Getting most recent entry")
+    
+    # get front of user's entries which should be the most recent
+    # then check if the id matches
+    user = await userCollection.find_one({"_id": uid},  {"entries": {"$slice": 1}}) 
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="User does not exist"
+        )
+    
+    mostRecentEntry = user["entries"][0]
+    
+    if mostRecentEntry["createdOn"] != dbDate:
+        logger.info("MISMATCH")
+        return None
+    
 
-    # await 
- 
-    entry = await _get_entry(uid, dbDate)
+    logger.info("GETTING CONTENT")
+    # otherwise return the entry at the id
+    uuid = mostRecentEntry["_id"]
+    
+    # search db for content using uuid 
+    entry = await _get_entry(uuid)
     if entry is not None:
+        logger.info("FOUND CONTENT")
         return JSONResponse(content=entry)
 
     response.status_code = status.HTTP_404_NOT_FOUND
@@ -401,6 +421,8 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         )
 
     await check_auth(uid, credentials)
+
+    logger.info("UPDATING ENTRY")
 
     writeEntry = {
         k: v for k, v in updated.model_dump(by_alias=True).items() if v is not None
@@ -417,7 +439,18 @@ async def update_entry(uid: str, dbDate: str, updated: UpdateJournalEntry = Body
         scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
         logger.info(scores);
 
-        updateResult = await entryCollection.find_one_and_update({"authorID": uid, "created": dbDate}, {"$set": writeEntry})
+        # get uuid to update 
+
+        user = await userCollection.find_one({"_id": uid},  {"entries": {"$slice": 1}}) 
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User does not exist"
+            )
+        mostRecentEntry = user["entries"][0]
+        uuid = mostRecentEntry["_id"]
+
+        updateResult = await entryCollection.find_one_and_update({"_id": uuid}, {"$set": writeEntry})
         if updateResult is not None:
             return { "message": "yippie"}
         raise HTTPException(
