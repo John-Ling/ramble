@@ -29,6 +29,8 @@ if _REDIS_PORT is not None:
 else:
     REDIS_PORT = 6379
 
+ENVIRONMENT = os.getenv("ENVIRONMENT")
+
 db = None
 redisStore: redis.Redis | None = None # startup redis using docker
 oauth2Scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -54,7 +56,7 @@ async def lifespan(app: FastAPI):
         redisStore = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
 
         logger.info("Getting collections")
-        db = client["development"]
+        db = client[ENVIRONMENT]
 
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")

@@ -28,6 +28,7 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(true);
   const todayDbDate = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
   const [dbDate, setDbDate] = useState<string>(todayDbDate);
+  const [entryName, setEntryName] = useState<string>(todayDbDate);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // entries menu
@@ -72,7 +73,7 @@ export default function JournalPage() {
     
     const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${entryName}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -87,7 +88,7 @@ export default function JournalPage() {
     setPendingSave(false);
     const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${entryName}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -102,7 +103,11 @@ export default function JournalPage() {
 
   const load_entry = (entry: JournalEntryReference) => {
     console.log(entry);
-    setDbDate(entry.createdOn);
+    let target = entry.name;
+    if (!target) {
+      target = entry.createdOn;
+    }
+    setEntryName(target);
   }
 
   
@@ -131,7 +136,7 @@ export default function JournalPage() {
   //   document.body.setAttribute("data-theme", "gruvbox");
   // }
 
-  let fetched = useLoadedEntry(user, dbDate);
+  let fetched = useLoadedEntry(user, entryName);
 
   useEffect(() => {
     if (fetched.data) {
@@ -143,7 +148,7 @@ export default function JournalPage() {
 
   useEffect(() => {
     fetched.mutate();
-  }, [dbDate]);
+  }, [entryName]);
 
   return (
     <ProtectedRoute>
@@ -187,12 +192,12 @@ export default function JournalPage() {
   )
 }
 
-function useLoadedEntry(user: User | null, dbDate: string) {
+function useLoadedEntry(user: User | null, entryName: string) {
   const uid = user?.id;
   const fetcher = (url: string) => fetch(url).then(r => r.json());  
 
   // load single single entry
-  const { data, error, isLoading , mutate,} = useSWR(uid && dbDate ? `/api/entries/${uid}/${dbDate}/` : null, fetcher,  {
+  const { data, error, isLoading , mutate,} = useSWR(uid && entryName ? `/api/entries/${uid}/${entryName}/` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });
