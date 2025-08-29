@@ -61,8 +61,9 @@ export async function PUT(req: NextRequest, { params }: RouteParameters) {
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({
             _id: uid + dbDate,
+            name: dbDate,
             authorID: uid,
-            created: dbDate,
+            createdOn: dbDate,
             content: entry.content
         })
     })

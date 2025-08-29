@@ -26,15 +26,14 @@ export default function JournalPage() {
   const [content, setContent] = useState<string>("");
   const [saved, setSaved] = useState<string>("");
   const [pendingSave, setPendingSave] = useState<boolean>(true);
-  const currentDate = new Intl.DateTimeFormat("en-US").format(new Date()).replaceAll('/', '-');
-  const [dbDate, setDbDate] = useState<string>(currentDate)
+  const todayDbDate = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
+  const [dbDate, setDbDate] = useState<string>(todayDbDate);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [fetchCount, setFetchCount] = useState<number>(12);
-  const todayDbDate = currentDate;
-
+  
   // users can only read old entries not make edits to them
   const readOnly = dbDate !== todayDbDate;
 
@@ -71,9 +70,9 @@ export default function JournalPage() {
     setSaved(content);
     setPendingSave(false);
     
-    const entry: JournalEntryReqBody = {_id: "", name: todayDbDate, authorID: user.id, createdOn: todayDbDate, content: content};
+    const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -86,9 +85,9 @@ export default function JournalPage() {
     if (!user || user.id === undefined) return;
     setSaved(content);
     setPendingSave(false);
-    const entry: JournalEntryReqBody = {_id: "", name: todayDbDate, authorID: user.id, createdOn: todayDbDate, content: content};
+    const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${todayDbDate}/`, {
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${dbDate}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -172,7 +171,7 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{fetched.isLoading ? "Loading..." : dbDate.replaceAll('-', '/')}</h1>
+            <h1 className="p-2">{fetched.isLoading ? "Loading..." : db_date_to_date(dbDate)}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <VoiceRecorder />

@@ -12,7 +12,6 @@ import httpx
 import os
 import uvicorn
 import redis
-import json
 import uuid
 import logging
 
@@ -39,7 +38,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 classifier = None
 tokeniser = None
 
-
 userCollection: AsyncIOMotorCollection | None = None
 entryCollection: AsyncIOMotorCollection | None = None
 emotionCollection: AsyncIOMotorCollection | None = None
@@ -48,7 +46,6 @@ collection:  AsyncIOMotorCollection | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db, userCollection, entryCollection, redisStore, classifier, tokeniser
-    
     try:
         # Startup code
         logger.info("Connecting to MongoDB")
@@ -57,7 +54,7 @@ async def lifespan(app: FastAPI):
         redisStore = redis.Redis(host="redis", port=REDIS_PORT, decode_responses=True)
 
         logger.info("Getting collections")
-        db = client["prod"]
+        db = client["development"]
 
         userCollection = db.get_collection("users")
         entryCollection = db.get_collection("entries")
@@ -72,12 +69,12 @@ async def lifespan(app: FastAPI):
         # Create indexes for composite keys on entries
         # await entryCollection.create_index([("authorID", ASCENDING), ("created", ASCENDING)], unique=True)
     except Exception as e:
-        print(e)
+        logger.error(e)
     yield
     # Shutdown code
     if db is not None:
         db.client.close()
-        print("Disconnected from DB")
+        logger.info("Disconnected from DB")
 
 app = FastAPI(
     title="Ramble Middleware",
@@ -94,12 +91,10 @@ app.add_middleware(
 )
 
 @app.get("/walao")
-async def reset():
-    # pls pls pls remove this in production
+async def delete_all():
     await entryCollection.delete_many({})
     await userCollection.delete_many({})
-    return {"walao": "completed"}
-
+    return {"Done": "walao"}
 
 # probably refactor into a decorator
 async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
@@ -184,6 +179,16 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
 
     generatedID = str(uuid.uuid4())
     entryReference.id = generatedID + body["authorID"]
+
+    # format createdOn
+    # tokens = body["createdOn"].split('-')
+    # formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
+
+    # if len(tokens[0]) == 1:
+    #     tokens[0] = f"0{tokens[0][0]}"
+    #     formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
+
+    # logger.info(formatted)
     entryReference.createdOn = body["createdOn"]
     entryReference.name = body["name"]
 
@@ -208,6 +213,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
                                             }
                                         )
     
+        
 
     insertEntry: JournalEntry = JournalEntry()
     insertEntry.id = generatedID + body["authorID"]
@@ -259,13 +265,16 @@ async def _insert_entry(entry: JournalEntry):
     return { "message": "Wrote document" }
 
 async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
+    logger.info(dbDate)
     pipeline = [
         {"$match": {"_id": uid}},
         {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
         {
             "$addFields": {
                 "entries._dateCreated": {
-                    "$dateFromString": { "dateString": "$entries._id" }
+                    "$dateFromString": {
+                        "dateString": "$entries.createdOn"
+                    }
                 }
             }
         },
@@ -273,7 +282,7 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
         {
             "$addFields": {
                 "entries._beforeTarget": {
-                    "$lt": ["$entries._dateCreated", {
+                    "$lte": ["$entries._dateCreated", {
                         "$dateFromString": { "dateString": dbDate }
                     }]
                 }
@@ -306,6 +315,10 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
 
 @app.get("/api/entries/{uid}/{dbDate}/{fetchCount}/", status_code=status.HTTP_200_OK)
 async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
+    """
+    Given a specific db date try and get fetchCount entries before it including itself
+    """
+    
     if userCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -313,41 +326,44 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         )
 
     try:
-    
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="User does not exist"
-            )
-        
-        mostRecentEntry = user["entries"][0]
-    
-        firstEntry = JournalEntryReference()
+        # try getting the first entry with specific dbDate
+        logger.info("Getting first entry");
+        logger.info(dbDate);
 
-        if mostRecentEntry["createdOn"] != dbDate:
-            logger.info("MISMATCH")
-            # create dummy entry 
-            firstEntry.createdOn = dbDate
-            return None
-        else:
-            pass
+        # format dbDate to work
+        # tokens = dbDate.split('-')
+        # formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
 
-        firstEntry = await _get_entry(uid, dbDate)
-        logger.info(firstEntry)
+        # if len(tokens[0]) == 1:
+        #     tokens[0] = f"0{tokens[0][0]}"
+        #     formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
 
-        if firstEntry is None:
+        entries = []
+        entry = await userCollection.aggregate([
+            {"$match": {"_id": uid}},
+            {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+            {
+                "$match": {
+                    "entries.createdOn": dbDate
+                }
+            },
+            {"$limit": 1}
+        ]).to_list(1)
+
+        if entry == []:
             # create dummy entry
-            firstEntry = JournalEntryReference(_id=dbDate, created=dbDate, name="", favourite=False).model_dump(by_alias=True)
-            logger.debug(firstEntry)
-        entries = [firstEntry]
-    
-        (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
+            logger.info("No entry found")
+            entries = [{"_id": dbDate, "createdOn": dbDate, "name": dbDate, "favourite": False}]        
 
+        logger.info(entries)
+        (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
         if not entriesBefore or not count:
             return {"entries": entries, "finalEntry": None, "entryCount": 1, "areDocumentsLeft": False}
 
         for entry in entriesBefore:
             entries.append(entry)
+
+        logger.info("ALL ENTRIES ", entries)
     
         count = count
         finalEntry = None
@@ -360,9 +376,9 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             # remove final entry and keep track of it 
             finalEntry = entries.pop()
             logger.info(finalEntry)
-            logger.info(finalEntry["_id"])
-            if finalEntry and finalEntry["_id"]:
-                (entriesLeft, _) = await get_entries_before(uid, finalEntry["_id"], fetchCount=1)
+            logger.info(finalEntry["createdOn"])
+            if finalEntry and finalEntry["createdOn"]:
+                (entriesLeft, _) = await get_entries_before(uid, finalEntry["createdOn"], fetchCount=1)
                 if entriesLeft:
                     areDocumentsLeft = True
         

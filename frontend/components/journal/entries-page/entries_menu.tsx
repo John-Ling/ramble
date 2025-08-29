@@ -140,7 +140,7 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
                 >
                   <FileText size={48} />
                   <p className="text-sm">
-                    {entry.created}
+                    {entry.name}
                   </p>
                 </div>
               )
