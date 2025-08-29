@@ -19,7 +19,6 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     });
     if (response.ok) {
         const data = await response.json();
-        console.log(data);
         return Response.json(data, {"status": 200});
     }
 

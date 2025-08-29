@@ -389,12 +389,10 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
             detail=f"Error: {e}"
         )
 
-async def _get_entry(id: str):
+async def _get_entry(entryUUID: str):
     if entryCollection is None:
         return None
-
-    logger.info("Searching for ", id)
-    entry = await entryCollection.find_one({"_id": id})
+    entry = await entryCollection.find_one({"_id": entryUUID})
     if entry is not None:
         return entry
 
@@ -417,9 +415,6 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
 
     # get uuid for entry
     # entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
-
-    logger.info("Getting most recent entry")
-
     # try get most recent entry with specific entry name
     foundEntry = await userCollection.aggregate([
         {"$match": {"_id": uid}},
@@ -444,7 +439,6 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
     # # search db for content using uuid 
     entry = await _get_entry(entryUUID)
     if entry is not None:
-        logger.info("FOUND CONTENT")
         return JSONResponse(content=entry)
 
     response.status_code = status.HTTP_404_NOT_FOUND
