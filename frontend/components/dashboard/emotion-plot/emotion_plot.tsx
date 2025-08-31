@@ -101,7 +101,7 @@ export default function EmotionPlot() {
       <div className="flex gap-2 mb-4">
         {/* Filter Dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger>
             <Button variant="secondary" size="icon" className="size-8" ><ListFilter /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
@@ -118,18 +118,15 @@ export default function EmotionPlot() {
 
         {/* Emotion Visibility Control */}
         <Popover>
-          <PopoverTrigger asChild>
+          <PopoverTrigger>
             <Button variant="secondary" size="sm" className="gap-2 text-foreground">
-              Emotions Shown ({visibleCount}/{totalCount})
+              Emotions Displayed ({visibleCount}/{totalCount})
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80" align="end">
             <div className="grid gap-4">
               <div className="space-y-2">
                 <h4 className="font-medium leading-none">Emotion Visibility</h4>
-                <p className="text-sm text-muted-foreground">
-                  Control which emotion lines are displayed on the chart
-                </p>
               </div>
               
               <div className="flex gap-2 mb-2">

@@ -3,6 +3,9 @@
 import ProtectedRoute from "../providers/protected_route";
 import EmotionPlot from "./emotion-plot/emotion_plot";
 
+import { Button } from "../ui/button";
+import { ListFilter } from "lucide-react";
+
 export default function DashboardPage() {
   return (
     <>

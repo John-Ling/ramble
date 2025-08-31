@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme base {
   --color-background: oklch(0.145 0 0);
   --color-foreground: oklch(0.985 0 0);
@@ -184,7 +186,6 @@
   --color-accent-foreground: #272822;
 }
 
-
 :root,
 [data-theme="atom-light"] {
   --color-background: #fafafa;
@@ -222,7 +223,7 @@
   --color-chart-3: #c18401;
   --color-chart-4: #e45649;
   --color-chart-5: #a626a4;
-  
+
 }
 
 :root,
@@ -264,7 +265,6 @@
   --color-chart-4: #c678dd;
   --color-chart-5: #56b6c2;
 } 
-
 
 :root,
 [data-theme="tokyo-night"] {
@@ -506,7 +506,6 @@
   --color-chart-5: #d699b6;
 }
 
-
 :root,
 [data-theme="gruvbox"] {
   --color-background: #282828;
@@ -571,7 +570,6 @@
   --radius-xl: calc(0.625rem + 4px);
 } 
 
-
 @layer base {
   * {
     @apply border-border outline-ring/50 text-foreground;
@@ -594,6 +592,5 @@
 }
 
 @layer utilities {
-  
 
 }
