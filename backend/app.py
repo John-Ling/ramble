@@ -196,6 +196,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
         }
         await userCollection.insert_one(newUser)
     else:
+        # entries are stored in a stack where the most recent is at the front
         await userCollection.update_one({"_id": uid}, 
                                             {"$push": {
                                                 "entries": {
@@ -359,16 +360,24 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         logger.info(dbDate);
 
         entries = []
+
+
+        # check if the most recent entry matches the dbDate
+        
+        # handle edge case where documents are uploaded
+        # and as such are 
         entry = await userCollection.aggregate([
             {"$match": {"_id": uid}},
             {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
             {
                 "$match": {
-                    "entries.createdOn": dbDate
+                    "entries.name": dbDate
                 }
             },
             {"$limit": 1}
         ]).to_list(1)
+
+        logger.info(entry)
 
         if entry == []:
             # create dummy entry

@@ -22,3 +22,4 @@ NextAuth is used for handling authentication
 - Markdown support
 - Loading animations and better UI
 
+- Fix UI with Upload Icon

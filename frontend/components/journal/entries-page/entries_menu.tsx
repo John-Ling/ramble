@@ -19,7 +19,7 @@ interface EntriesPageProps {
   fetchCount: number;
   set_fetch_count: () => void;
   on_close: () => void;
-  on_entry_select: (entry: JournalEntryReference) => void;
+  on_entry_select: (entry: JournalEntryReference, index: number) => void;
 }
 
 export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, on_close, on_entry_select}: EntriesPageProps) {
@@ -80,8 +80,9 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
 
   function selectEntry() {
     const entry: JournalEntryReference | undefined = entries[activeIndex];
+
     if (entry) {
-      on_entry_select(entry);
+      on_entry_select(entry, activeIndex);
     }
   }
 
@@ -136,7 +137,7 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
             {entries?.map((entry: JournalEntryReference, i: number) => {
               return (
                 <div key={i} onClick={selectEntry} onMouseOver={() => setActiveIndex(i)}  
-                  className={`hover:cursor-pointer flex flex-col items-center p-2 rounded-md ${ i === activeIndex ? "bg-chart-2 text-black" : ""}`}
+                  className={`hover:cursor-pointer flex flex-col items-center p-4 rounded-md ${ i === activeIndex ? "bg-chart-2 text-black" : ""}`}
                 >
                   <FileText size={48} />
                   <p className="text-sm">

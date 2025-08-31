@@ -29,14 +29,15 @@ export default function JournalPage() {
   const todayDbDate = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
   const [dbDate, setDbDate] = useState<string>(todayDbDate);
   const [entryName, setEntryName] = useState<string>(todayDbDate);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // entries menu
   const [entriesVisible, setEntriesVisible] = useState<boolean>(false);
   const [fetchCount, setFetchCount] = useState<number>(12);
-  
+
+  const [readOnly, setReadOnly] = useState<boolean>(false);
   // users can only read old entries not make edits to them
-  const readOnly = dbDate !== todayDbDate;
 
   // access tokens take around 1 hour to expire so refresh them 
   // 5 minutes before they do
@@ -101,8 +102,12 @@ export default function JournalPage() {
     return;
   }
 
-  const load_entry = (entry: JournalEntryReference) => {
+  const load_entry = (entry: JournalEntryReference, index: number) => {
+    // make only the first entry (at index 0) readable
+    setReadOnly(index === 0 ? false : true);
+
     console.log(entry);
+    // if entry has no name default to the date it was created on
     let target = entry.name;
     if (!target) {
       target = entry.createdOn;
@@ -110,7 +115,6 @@ export default function JournalPage() {
     setEntryName(target);
   }
 
-  
   const on_entry_menu_close = () => {
     setEntriesVisible(false);
     textareaRef.current?.focus();
@@ -139,7 +143,11 @@ export default function JournalPage() {
   let fetched = useLoadedEntry(user, entryName);
 
   useEffect(() => {
-    if (fetched.data) {
+    console.log(fetched);
+    if (!fetched.data) {
+      setContent("");
+      setSaved("");
+    } else {
       const entry = fetched.data as JournalEntry;
       setContent(entry.content);
       setSaved(entry.content);
@@ -176,7 +184,7 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{fetched.isLoading ? "Loading..." : db_date_to_date(dbDate)}</h1>
+            <h1 className="p-2">{fetched.isLoading ? "Loading..." : entryName}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <VoiceRecorder />
