@@ -62,7 +62,7 @@ class JournalEntryEmotionData(BaseModel):
     nervousness: float = Field(default_factory=0.0)
     optimism: float = Field(default_factory=0.0)
     pride: float = Field(default_factory=0.0)
-    realisation: float = Field(default_factory=0.0)
+    realization: float = Field(default_factory=0.0)
     relief: float = Field(default_factory=0.0)
     remorse: float = Field(default_factory=0.0)
     sadness: float = Field(default_factory=0.0)

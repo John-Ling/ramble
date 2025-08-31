@@ -47,7 +47,7 @@ collection:  AsyncIOMotorCollection | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db, userCollection, entryCollection, redisStore, classifier, tokeniser
+    global db, userCollection, entryCollection, emotionCollection, redisStore, classifier, tokeniser
     try:
         # Startup code
         logger.info("Connecting to MongoDB")
@@ -94,8 +94,8 @@ app.add_middleware(
 
 @app.get("/walao")
 async def delete_all():
-    await entryCollection.delete_many({})
     await userCollection.delete_many({})
+    await entryCollection.delete_many({})
     return {"Done": "walao"}
 
 # probably refactor into a decorator
@@ -181,16 +181,6 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
 
     generatedID = str(uuid.uuid4())
     entryReference.id = generatedID + body["authorID"]
-
-    # format createdOn
-    # tokens = body["createdOn"].split('-')
-    # formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
-
-    # if len(tokens[0]) == 1:
-    #     tokens[0] = f"0{tokens[0][0]}"
-    #     formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
-
-    # logger.info(formatted)
     entryReference.createdOn = body["createdOn"]
     entryReference.name = body["name"]
 
@@ -223,7 +213,7 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
 
     # Insert actual entry into database
     # update entry collection
-    if await _insert_entry(insertEntry) is not None:
+    if await _insert_entry(insertEntry, body["createdOn"], body["authorID"]) is not None:
         return {"message": "Everything done :)"}
 
     # roll back change if there is an error
@@ -239,11 +229,14 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
         detail="walao something go wrong undoing change"
     )
 
-async def _insert_entry(entry: JournalEntry):
+async def _insert_entry(entry: JournalEntry, dbDate: str, authorID: str):
     """
     Insert a journal entry into the entries collection
     """
     if entryCollection is None:
+        return None
+
+    if emotionCollection is None:
         return None
 
     entryDict = entry.model_dump(by_alias=True)    
@@ -256,15 +249,43 @@ async def _insert_entry(entry: JournalEntry):
         logger.info("ENTRY ALREADY EXISTS")
         return None
 
+    logger.info("PROCESSING EMOTIONS")
     # do emotion processing here
     chunks = emotional_analytics.generate_chunks(entryDict["content"], tokeniser)
     scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
-    logger.info(scores);
 
-    logger.info("PROCESSING EMOTIONS")
-    
+    emotionData: JournalEntryEmotionData = _create_emotion_data(scores, authorID, dbDate, entryDict["_id"])
+    emotionDataDict = emotionData.model_dump(by_alias=True)
+
+    await emotionCollection.insert_one(emotionDataDict)    
     await entryCollection.insert_one(entryDict)
     return { "message": "Wrote document" }
+
+def _create_emotion_data(scores, authorID, dbDate, entryID):
+    logger.info("SCORES")
+    logger.info(scores)
+
+    emotionFields = [
+        'admiration', 'amusement', 'anger', 'annoyance', 'approval',
+        'caring', 'confusion', 'curiosity', 'desire', 'disappointment',
+        'disapproval', 'embarrassment', 'disgust', 'fear', 'gratitude',
+        'joy', 'excitement', 'neutral', 'love', 'optimism',
+        'pride', 'realization', 'relief', 'remorse', 'nervousness',
+        'surprise', 'sadness', 'grief'
+    ]
+
+    emotions = {}
+    for emotion in emotionFields:
+        emotions[emotion] = scores[emotion]
+
+    emotionData = JournalEntryEmotionData(
+        id=entryID,
+        authorID=authorID,
+        created=dbDate,
+        **emotions
+    )
+    return emotionData
+
 
 async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
     logger.info(dbDate)
@@ -331,14 +352,6 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         # try getting the first entry with specific dbDate
         logger.info("Getting first entry");
         logger.info(dbDate);
-
-        # format dbDate to work
-        # tokens = dbDate.split('-')
-        # formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
-
-        # if len(tokens[0]) == 1:
-        #     tokens[0] = f"0{tokens[0][0]}"
-        #     formatted = f"{tokens[2]}-{tokens[0]}-{tokens[1]}"
 
         entries = []
         entry = await userCollection.aggregate([
@@ -471,7 +484,6 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
 
         chunks = emotional_analytics.generate_chunks(writeEntry["content"], tokeniser)
         scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
-        logger.info(scores);
 
         # get uuid to update
         foundEntry = await userCollection.aggregate([

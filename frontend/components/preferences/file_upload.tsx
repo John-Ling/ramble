@@ -31,7 +31,7 @@ export default function FileUpload({ uid }: FileUploadProps) {
     formData.append("name", file.name);
 
 
-    const createdOn = new Intl.DateTimeFormat("en-US").format(new Date()).replaceAll('/', '-');
+    const createdOn = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
     formData.append("createdOn", createdOn);
 
     if (!uid) {
@@ -71,7 +71,8 @@ export default function FileUpload({ uid }: FileUploadProps) {
   const on_drop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    setUploadStatus("uploading");
+    console.log("Setting status");
+    setUploadStatus(() => "uploading");
     const droppedFiles = Array.from(e.dataTransfer.files);
     const uploadFiles: FileItem[] = [];
 
@@ -83,7 +84,7 @@ export default function FileUpload({ uid }: FileUploadProps) {
       uploadFiles.push({ file: file, name: formattedName, size: file.size, type: file.type} as FileItem);
     })
     await upload_files(uploadFiles);
-    setUploadStatus("idle");
+    setUploadStatus(() => "idle");
     return;
   };
 
@@ -106,13 +107,13 @@ export default function FileUpload({ uid }: FileUploadProps) {
 
   return (
     <>
-     <h3 className="font-bold text-2xl text-center mb-5">Upload Entries</h3>
-      <div className="bg-[#111111] h-[30vh] w-full lg:w-3/5 flex flex-col justify-center items-center"
+      <div className="bg-card h-[30vh] w-full lg:w-4/5 flex flex-col justify-center items-center"
         onClick={() => fileInputRef.current?.click()}
         onDrop={on_drop}
         onDragLeave={on_drag_leave}
         onDragOver={on_drag_over}
       >
+        <h3 className="font-bold text-2xl text-center mb-5">Upload Entries</h3>
         <div className="flex justify-center items-center flex-col">
           <FileText className={`size-16 ${isDragging ? "text-orange-400" : "" }`} />
           <p className="mb-5 text-lg">{uploadStatus === "uploading" ? "Uploading..." : "Drag and Drop Files"}</p>

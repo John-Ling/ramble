@@ -34,10 +34,6 @@ def calculate_emotion_scores(chunks, classifier):
                 emotionScores[emotion] = [score]
                 continue
             emotionScores[emotion].append(score)
-        print()
-
-    labels = []
-
     
     for label in emotionScores:
         logger.info(label)
@@ -56,10 +52,9 @@ def calculate_emotion_scores(chunks, classifier):
         score = 0
         if validEmotionCount != 0:
             score = total / validEmotionCount
-        labels.append((label, score))
-    
-    return labels
+        emotionScores[label] = score
 
+    return emotionScores
 
 def generate_chunks(text, tokeniser):
     CHUNK_SIZE = 200
