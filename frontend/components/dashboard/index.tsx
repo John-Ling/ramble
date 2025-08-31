@@ -1,6 +1,8 @@
 "use client";
 
 import ProtectedRoute from "../providers/protected_route";
+import EmotionPlot from "./emotion-plot/emotion_plot";
+
 export default function DashboardPage() {
   return (
     <>
@@ -10,10 +12,9 @@ export default function DashboardPage() {
               <div className="flex justify-between">
                 <h1 className="text-3xl font-bold">Dashboard</h1>
               </div>
-
-              
-
-
+              <div>
+                <EmotionPlot />
+              </div>
           </div>
         </div>
       </ProtectedRoute>

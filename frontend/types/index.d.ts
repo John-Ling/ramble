@@ -18,3 +18,10 @@ interface JournalEntryReqBody {
     createdOn: string;
     content: string;
 }
+
+
+interface GraphEmotion {
+    emotion: string;
+    colour: string;
+    hidden: boolean;
+}

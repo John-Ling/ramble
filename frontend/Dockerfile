@@ -13,7 +13,7 @@ RUN npm ci --omit=dev
 COPY --from=base /app/.next .next
 COPY --from=base /app/public public
 COPY --from=base /app/node_modules node_modules
-COPY --from=base /app/next.config.ts ./
+COPY --from=base /app/next.config.js ./
 COPY --from=base /app/tsconfig.json ./
 COPY --from=base /app/package.json ./
 
