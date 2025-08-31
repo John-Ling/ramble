@@ -4,6 +4,7 @@ import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 import { User } from "next-auth";
+import { double_encode } from "@/lib/utils";
 
 
 interface ResponseData {
@@ -156,11 +157,8 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
 
 function useEntries(user: User | null, dbDate: string, fetchCount: number) {
   const uid = user?.id;
-
   const fetcher = (url: string) => fetch(url).then(r => r.json());
-
-  // use mutate for more efficient pagination 
-  const { data, mutate, error, isLoading } = useSWR(uid && dbDate && fetchCount ? `/api/entries/${uid}/${dbDate}/${fetchCount}` : null, fetcher,  {
+  const { data, mutate, error, isLoading } = useSWR(uid && dbDate && fetchCount ? `/api/entries/${uid}/${double_encode(dbDate)}/${fetchCount}` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });

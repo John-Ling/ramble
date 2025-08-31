@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from transformers import pipeline, AutoTokenizer
 
+from urllib.parse import unquote
 from dotenv import load_dotenv
 import httpx
 import os
@@ -152,7 +153,7 @@ async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizat
 
     return {"message": "Added token"}
 
-@app.post("/api/entries/{uid}/", status_code=status.HTTP_201_CREATED)
+@app.post("/api/entries/{uid}/create/", status_code=status.HTTP_201_CREATED)
 async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Takes the schema for a journal entry and creates both a reference and entry
@@ -167,11 +168,13 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
         )
     
     await check_auth(uid, credentials)
+
+    logger.info("CREATING ENTRY")
     
     user = await userCollection.find_one({"_id": uid})
     body = entry.model_dump(by_alias=True)
 
-    if (body["createdOn"] == "" or body["_id"] == "" or body["authorID"] == ""):
+    if (body["createdOn"] == "" or body["authorID"] == ""):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Malformed request"
@@ -206,8 +209,6 @@ async def create_entry_reference_and_insert_entry(uid: str, entry: JournalEntryR
                                                 }
                                             }
                                         )
-    
-        
 
     insertEntry: JournalEntry = JournalEntry()
     insertEntry.id = generatedID + body["authorID"]
@@ -294,7 +295,7 @@ def _create_emotion_data(scores, authorID, dbDate, entryID):
 
 
 async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
-    logger.info(dbDate)
+    logger.info("Getting entries before")
     pipeline = [
         {"$match": {"_id": uid}},
         {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
@@ -361,17 +362,16 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
         entries = []
 
+        decoded =  unquote(unquote(dbDate))
 
-        # check if the most recent entry matches the dbDate
-        
-        # handle edge case where documents are uploaded
-        # and as such are 
+
+        # find the most recent entry with dbDate
         entry = await userCollection.aggregate([
             {"$match": {"_id": uid}},
             {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
             {
                 "$match": {
-                    "entries.name": dbDate
+                    "entries.createdOn": decoded
                 }
             },
             {"$limit": 1}
@@ -382,7 +382,11 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         if entry == []:
             # create dummy entry
             logger.info("No entry found")
-            entries = [{"_id": dbDate, "createdOn": dbDate, "name": dbDate, "favourite": False}]        
+            # format dbDate 
+
+            components = decoded.split('-')
+            formatted = f"{components[2]:02d}/{components[1]:02d}/{components[0]:04d}"
+            entries = [{"_id": decoded, "createdOn": decoded, "name": formatted, "favourite": False}]        
 
         logger.info(entries)
         (entriesBefore, count) = await get_entries_before(uid, dbDate, fetchCount=fetchCount)
@@ -391,8 +395,6 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
         for entry in entriesBefore:
             entries.append(entry)
-
-        logger.info("ALL ENTRIES ", entries)
     
         count = count
         finalEntry = None
@@ -430,7 +432,7 @@ async def _get_entry(entryUUID: str):
 @app.get("/api/entries/{uid}/{entryName}/", status_code=status.HTTP_200_OK)
 async def get_entry(uid: str, entryName: str, response: Response, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
-    Given a entry name (assumed to be unique) return an entry
+    Given a uri encoded entry name (assumed to be unique) return an entry
     Returns 200 if entry exists and 204 if it does not
     """
 
@@ -441,7 +443,7 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
         )
 
     await check_auth(uid, credentials)
-
+    decoded =  unquote(unquote(entryName))
     # get uuid for entry
     # entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
     # try get most recent entry with specific entry name
@@ -450,7 +452,7 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
         {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
         {
             "$match": {
-                "entries.name": entryName
+                "entries.name": decoded
             }
         },
         {"$limit": 1}
@@ -475,15 +477,22 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
 
 @app.put("/api/entries/{uid}/{entryName}/", status_code=status.HTTP_200_OK)
 async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
+    """
+    Updates an entry given its uri encoded name
+    """
+
     if entryCollection is None or userCollection is None or emotionCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Entry or User collection is Null"
         )
 
+
+    logger.info("CHECKING AUTH");
     await check_auth(uid, credentials)
 
     logger.info("UPDATING ENTRY")
+    logger.info(entryName)
 
     updateEntry = {
         k: v for k, v in updated.model_dump(by_alias=True).items() if v is not None
@@ -493,13 +502,14 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
         # at least one field needs to be updated
         # update entries collection
 
+        decoded = unquote(unquote(entryName))
         # get uuid to update
         foundEntry = await userCollection.aggregate([
             {"$match": {"_id": uid}},
             {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
             {
                 "$match": {
-                    "entries.name": entryName
+                    "entries.name": decoded
                 }
             },
             {"$limit": 1}
@@ -507,8 +517,8 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
 
         if foundEntry == []:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Could not  find entry"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Could not find entry"
             )
     
         entryUUID = str(foundEntry[0]["entries"]["_id"])        
@@ -529,6 +539,39 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document does not exist"
         )
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Document does not exist"
+    )
+
+
+@app.get("/api/entries/emotion/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
+async def  get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: str):
+    """
+    Returns n number of emotion data points based on a filterKey going backwards
+    from the first entry created on dbDate
+
+    FilterKey can be these values
+    entry
+    day
+    week
+    month
+    year
+
+    Filtering via day, week, month or year involves checking the createdAttribute and determining if the difference
+    from the start entry's creation date exceeds the n value specified
+    """
+
+    # check if entryName exists 
+
+    
+
+
+    return {"status": "completed : ) "}
+
+
+
 
 @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
 async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):

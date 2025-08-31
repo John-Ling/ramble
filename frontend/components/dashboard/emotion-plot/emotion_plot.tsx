@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 import { Button } from "@/components/ui/button";
-import { ListFilter, Eye, EyeOff, Settings, Check } from "lucide-react";
+import { ListFilter, Eye, EyeOff } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -21,7 +21,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,13 +34,17 @@ import {
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+
 export default function EmotionPlot() {
     const data: DataPoint[] = [ 
-    create_data_point({name: "19/03/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
-    create_data_point({name: "20/03/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
-    create_data_point({name: "28/03/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
-    create_data_point({name: "07/04/2024", amusement: 0.78, optimism: 0.65, confusion: 0.35, approval: 0.02, joy: 0.01}),
-    create_data_point({name: "09/04/2024", joy: 0.99, amusement: 0.63, annoyance: 0.14, disapproval: 0.1, optimism: 0.05, anger: 0.02}),
+    create_data_point({name: "01/01/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
+  create_data_point({name: "15/01/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
+  create_data_point({name: "29/01/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
+  create_data_point({name: "12/02/2024", amusement: 0.78, optimism: 0.65, confusion: 0.35, approval: 0.02, joy: 0.01}),
+  create_data_point({name: "26/02/2024", joy: 0.99, amusement: 0.63, annoyance: 0.14, disapproval: 0.1, optimism: 0.05, anger: 0.02}),
+  create_data_point({name: "11/03/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
+  create_data_point({name: "25/03/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
+  create_data_point({name: "08/04/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
   ];
 
   // Initialize visible emotions with visibility state
@@ -155,7 +158,7 @@ export default function EmotionPlot() {
                       <Checkbox
                         id={emotion.emotion}
                         checked={emotion.visible}
-                        onCheckedChange={() => toggleEmotionVisibility(emotion.emotion)}
+                        onCheckedChange={ () => toggleEmotionVisibility(emotion.emotion) }
                       />
                       <div className="flex items-center gap-2 flex-1">
                         <div 
@@ -169,11 +172,7 @@ export default function EmotionPlot() {
                           {emotion.emotion}
                         </Label>
                       </div>
-                      {emotion.visible ? (
-                        <Eye className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-gray-400" />
-                      )}
+                      { emotion.visible ? <Eye className="h-4" /> : <EyeOff className="h-4"/> }
                     </div>
                   ))}
                 </div>
@@ -183,7 +182,8 @@ export default function EmotionPlot() {
         </Popover>
       </div>
     
-      <div className="w-full max-w-5xl h-96 p-4 rounded-lg bg-background border-2">
+      {/* maximum 12 labelled points but  */}
+      <div className="w-full max-w-6xl h-96 p-4 rounded-lg bg-background border-2">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />

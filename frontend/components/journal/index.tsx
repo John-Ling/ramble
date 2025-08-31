@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
 import VoiceRecorder from "./recorder/voice_recorder";
-import { db_date_to_date, date_to_db_date } from "@/lib/utils";
+import { db_date_to_date, date_to_db_date, double_encode } from "@/lib/utils";
 
 import { signOut, useSession } from "next-auth/react";
 import { useUser } from "@/hooks/useUser";
@@ -26,7 +26,7 @@ export default function JournalPage() {
   const [pendingSave, setPendingSave] = useState<boolean>(true);
   const todayDbDate = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
   const [dbDate, setDbDate] = useState<string>(todayDbDate);
-  const [entryName, setEntryName] = useState<string>(todayDbDate);
+  const [entryName, setEntryName] = useState<string>(db_date_to_date(todayDbDate));
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -72,7 +72,8 @@ export default function JournalPage() {
     
     const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${entryName}/`, {
+    
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${double_encode(entryName)}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -87,7 +88,9 @@ export default function JournalPage() {
     setPendingSave(false);
     const entry: JournalEntryReqBody = {_id: "", name: db_date_to_date(dbDate), authorID: user.id, createdOn: dbDate, content: content};
 
-    await fetch(`http://localhost:3000/api/entries/${user.id}/${entryName}/`, {
+    console.log("Clicking ")
+
+    await fetch(`http://localhost:3000/api/entries/${user.id}/${double_encode(entryName)}/`, {
       method: "PUT",
       headers: {"Content-Type": "application/json", "accept": "application/json"},
       body: JSON.stringify(entry)
@@ -141,7 +144,6 @@ export default function JournalPage() {
   let fetched = useLoadedEntry(user, entryName);
 
   useEffect(() => {
-    console.log(fetched);
     if (!fetched.data) {
       setContent("");
       setSaved("");
@@ -150,8 +152,6 @@ export default function JournalPage() {
       setContent(entry.content);
       setSaved(entry.content);
     }
-
-
   }, [fetched.data, fetched.error]);
 
   useEffect(() => {
@@ -183,7 +183,7 @@ export default function JournalPage() {
         </div>
         {/* journal form */}
         <div className="w-full lg:w-3/5">
-          <div className="flex justify-between pb-2">
+          <div className="flex justify-between">
             <h1 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
@@ -191,7 +191,7 @@ export default function JournalPage() {
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={fetched.isLoading || readOnly} 
                     placeholder={`${fetched.isLoading ? "Loading..." : "What's on your mind?"}`}  
-                    className={`h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
+                    className={`mt-2 h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
                     ref={textareaRef}/>  
         </div>    
@@ -205,7 +205,7 @@ function useLoadedEntry(user: User | null, entryName: string) {
   const fetcher = (url: string) => fetch(url).then(r => r.json());  
 
   // load single single entry
-  const { data, error, isLoading , mutate,} = useSWR(uid && entryName ? `/api/entries/${uid}/${entryName}/` : null, fetcher,  {
+  const { data, error, isLoading , mutate,} = useSWR(uid && entryName ? `/api/entries/${uid}/${double_encode(entryName)}/` : null, fetcher,  {
     dedupingInterval: 5000,
     revalidateOnFocus: false
   });

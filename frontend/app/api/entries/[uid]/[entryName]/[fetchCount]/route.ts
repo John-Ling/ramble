@@ -2,11 +2,11 @@ import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
 
 interface RouteParameters {
-    params: Promise<{ uid: string, dbDate: string, fetchCount: number }>;
+    params: Promise<{ uid: string, entryName: string, fetchCount: number }>;
 }
 
 export async function GET(req: NextRequest, { params }: RouteParameters) {
-    const { uid, dbDate, fetchCount } = await params;
+    const { uid, entryName, fetchCount } = await params;
     const token = await getToken({ req });
 
     if (!token) {
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: RouteParameters) {
     }
 
     console.debug("GETTING ENTRIES");
-    const response = await fetch(`http://backend:8000/api/entries/${uid}/${dbDate}/${fetchCount}/`, {
+    const response = await fetch(`http://backend:8000/api/entries/${uid}/${encodeURIComponent(entryName)}/${fetchCount}/`, {
         headers: {"Authorization": `Bearer ${token.accessToken}`, "accept": "application/json"}
     });
     if (response.ok) {

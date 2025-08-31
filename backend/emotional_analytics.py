@@ -1,18 +1,9 @@
-from app import logger, emotionCollection
-from _types import JournalEntryEmotionData
+from app import logger
 
 """
 Functions for extracting emotion scores 
 for use with emotional analytics page
 """
-
-# async def insert_emotion_scores(emotionData: JournalEntryEmotionData): 
-#     document = await emotionCollection.find_one({"authorID": emotionData.authorID, "created": emotionData.created})
-
-#     if document is not None:
-#         # update
-#         await emotionCollection.update_one({"authorID": emotionData.authorID, "created": emotionData.created}, {"$push", {""}})
-
 
 def calculate_emotion_scores(chunks, classifier):
     emotionScores = {}

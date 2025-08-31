@@ -11,6 +11,7 @@ interface FileItem {
   size: number;
   type: string;
   createdOn: string;
+  lastModified: number; // unix epoch for the last time a file was modified
 }
 
 interface FileUploadProps {
@@ -31,25 +32,23 @@ export default function FileUpload({ uid }: FileUploadProps) {
     formData.append("file", file.file);
     formData.append("name", file.name);
 
-
-    const createdOn = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
+    const createdOn =  date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date(file.lastModified)));
     formData.append("createdOn", createdOn);
+    console.log(createdOn);
 
     if (!uid) {
       console.log("UID is null");
       return;
     }
 
-    await new Promise(r => setTimeout(r, 2000));
+    const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
+      method: "POST",
+      body: formData,
+    });
 
-    // const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
-    //   method: "POST",
-    //   body: formData,
-    // });
-
-    // if (response.ok) {
-    //   console.log("Successfully uploaded files");
-    // }
+    if (response.ok) {
+      console.log("Successfully uploaded files");
+    }
     return;
   }
 
@@ -91,7 +90,7 @@ export default function FileUpload({ uid }: FileUploadProps) {
     const uploadFiles: FileItem[] = [];
     droppedFiles.forEach((file: File) => {
       const formattedName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-      uploadFiles.push({ file: file, name: formattedName, size: file.size, type: file.type} as FileItem);
+      uploadFiles.push({ file: file, name: formattedName, size: file.size, type: file.type, lastModified: file.lastModified} as FileItem);
     })
     await upload_files(uploadFiles);
 
