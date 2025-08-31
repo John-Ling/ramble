@@ -12,9 +12,9 @@ export default function PreferencesPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex justify-center items-center">
-        <div className="bg-background border-2 border-accent w-full lg:w-3/5 flex justify-between">
+        <div className="bg-background border-2  rounded-lg  w-full lg:w-3/5 flex justify-between">
           {/* Sidebar */}
-          <div className="hidden lg:block  p-5  w-full lg:w-1/4  bg-card rounded-lg">
+          <div className="hidden lg:block  p-5  w-full lg:w-1/4  bg-card rounded-l-lg">
             <div className="flex flex-col w-full ">
               <h1 className="font-bold text-2xl">SETTINGS</h1>
               <h2 className="mt-5 font-bold">General</h2>

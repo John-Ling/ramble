@@ -17,8 +17,6 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { User } from "next-auth";
 
-import { v4 as uuidv4 } from 'uuid';
-
 export default function JournalPage() {
   const { update } = useSession();
   const router = useRouter();
@@ -152,7 +150,9 @@ export default function JournalPage() {
       setContent(entry.content);
       setSaved(entry.content);
     }
-  }, [fetched.data]);
+
+
+  }, [fetched.data, fetched.error]);
 
   useEffect(() => {
     fetched.mutate();
@@ -184,7 +184,7 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between pb-2">
-            <h1 className="p-2">{fetched.isLoading ? "Loading..." : entryName}</h1>
+            <h1 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
           </div>
           <VoiceRecorder />

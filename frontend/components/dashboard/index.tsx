@@ -8,11 +8,12 @@ export default function DashboardPage() {
     <>
       <ProtectedRoute>
         <div className="min-h-screen flex flex-col justify-center items-center">
-          <div className="bg-card p-5 rounded-lg w-full h-[85vh] lg:w-4/5 flex justify-between">
+          <div className="bg-card p-5 rounded-lg w-full h-[85vh] lg:w-4/5 flex flex-col">
               <div className="flex justify-between">
                 <h1 className="text-3xl font-bold">Dashboard</h1>
               </div>
-              <div>
+              <div className="mt-10">
+                <h2 className="text-2xl font-bold mb-4">Emotion Data</h2>
                 <EmotionPlot />
               </div>
           </div>

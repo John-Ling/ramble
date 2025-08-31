@@ -36,195 +36,184 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function EmotionPlot() {
+    const data: DataPoint[] = [ 
+    create_data_point({name: "19/03/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
+    create_data_point({name: "20/03/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
+    create_data_point({name: "28/03/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
+    create_data_point({name: "07/04/2024", amusement: 0.78, optimism: 0.65, confusion: 0.35, approval: 0.02, joy: 0.01}),
+    create_data_point({name: "09/04/2024", joy: 0.99, amusement: 0.63, annoyance: 0.14, disapproval: 0.1, optimism: 0.05, anger: 0.02}),
+  ];
+
+  // Initialize visible emotions with visibility state
+  const [visibleEmotions, setVisibleEmotions] = useState<VisibleEmotion[]>(() => 
+    defaultGraphEmotions.map(emotion => ({ ...emotion, visible: true }))
+  );
+
+  const [darkMode, setDarkMode] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // filter by past n entries, past n weeks  months and past n years
+  const [filterBy, setFilterBy] = useState<"day" | "week" | "month" | "year">("week");
+
+  const colors = darkMode
+  ? {
+      bg: "#1e1e2f",
+      text: "#e5e7eb",
+      grid: "#374151",
+      line: "#60a5fa",
+    }
+  : {
+      bg: "#ffffff",
+      text: "#111827",
+      grid: "#d1d5db",
+      line: "#3b82f6",
+    };
+
+  const on_dropdown_value_change = (filter: string) => {
+    if (filter === "day" || filter === "week" || filter === "month" || filter === "year")
+    {
+      setFilterBy(filter);
+    }
+  }
+
+  const toggleEmotionVisibility = (emotionName: string) => {
+    setVisibleEmotions(prev => 
+      prev.map(emotion => 
+        emotion.emotion === emotionName 
+          ? { ...emotion, visible: !emotion.visible }
+          : emotion
+      )
+    );
+  };
+
+  const toggleAllEmotions = (visible: boolean) => {
+    setVisibleEmotions(prev => 
+      prev.map(emotion => ({ ...emotion, visible }))
+    );
+  };
+
+  const visibleCount = visibleEmotions.filter(e => e.visible).length;
+  const totalCount = visibleEmotions.length;
+
   return (
-    <>
-      <h1>You're cooked</h1>
-      <Label>faowejeawoijf</Label>
-      
-    </>
-    
-  )
-  //   const data: DataPoint[] = [ 
-  //   create_data_point({name: "19/03/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
-  //   create_data_point({name: "20/03/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
-  //   create_data_point({name: "28/03/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
-  //   create_data_point({name: "07/04/2024", amusement: 0.78, optimism: 0.65, confusion: 0.35, approval: 0.02, joy: 0.01}),
-  //   create_data_point({name: "09/04/2024", joy: 0.99, amusement: 0.63, annoyance: 0.14, disapproval: 0.1, optimism: 0.05, anger: 0.02}),
-  // ];
+    <div
+    > 
+      <div className="flex gap-2 mb-4">
+        {/* Filter Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="icon" className="size-8" ><ListFilter /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Filter By</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup value={filterBy} onValueChange={on_dropdown_value_change}>
+              <DropdownMenuRadioItem value="day">Day</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="week">Week</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="month">Month</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="year">Year</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-  // // Initialize visible emotions with visibility state
-  // const [visibleEmotions, setVisibleEmotions] = useState<VisibleEmotion[]>(() => 
-  //   defaultGraphEmotions.map(emotion => ({ ...emotion, visible: true }))
-  // );
-
-  // const [darkMode, setDarkMode] = useState(true);
-  // const [loading, setLoading] = useState<boolean>(true);
-
-  // // filter by past n entries, past n weeks  months and past n years
-  // const [filterBy, setFilterBy] = useState<"day" | "week" | "month" | "year">("week");
-
-  // const colors = darkMode
-  // ? {
-  //     bg: "#1e1e2f",
-  //     text: "#e5e7eb",
-  //     grid: "#374151",
-  //     line: "#60a5fa",
-  //   }
-  // : {
-  //     bg: "#ffffff",
-  //     text: "#111827",
-  //     grid: "#d1d5db",
-  //     line: "#3b82f6",
-  //   };
-
-  // const on_dropdown_value_change = (filter: string) => {
-  //   if (filter === "day" || filter === "week" || filter === "month" || filter === "year")
-  //   {
-  //     setFilterBy(filter);
-  //   }
-  // }
-
-  // const toggleEmotionVisibility = (emotionName: string) => {
-  //   setVisibleEmotions(prev => 
-  //     prev.map(emotion => 
-  //       emotion.emotion === emotionName 
-  //         ? { ...emotion, visible: !emotion.visible }
-  //         : emotion
-  //     )
-  //   );
-  // };
-
-  // const toggleAllEmotions = (visible: boolean) => {
-  //   setVisibleEmotions(prev => 
-  //     prev.map(emotion => ({ ...emotion, visible }))
-  //   );
-  // };
-
-  // const visibleCount = visibleEmotions.filter(e => e.visible).length;
-  // const totalCount = visibleEmotions.length;
-
-  // return (
-  //   <div
-  //     className={`min-h-screen flex flex-col items-center justify-center `}
-  //   >
-  //     <h1 className="font-bold text-3xl my-5">Emotion Classification Demo</h1>
-      
-  //     <div className="flex gap-2 mb-4">
-  //       {/* Filter Dropdown */}
-  //       <DropdownMenu>
-  //         <DropdownMenuTrigger asChild>
-  //           <Button variant="secondary" size="icon" className="size-8" ><ListFilter /></Button>
-  //         </DropdownMenuTrigger>
-  //         <DropdownMenuContent className="w-56">
-  //           <DropdownMenuLabel>Filter By</DropdownMenuLabel>
-  //           <DropdownMenuSeparator />
-  //           <DropdownMenuRadioGroup value={filterBy} onValueChange={on_dropdown_value_change}>
-  //             <DropdownMenuRadioItem value="day">Day</DropdownMenuRadioItem>
-  //             <DropdownMenuRadioItem value="week">Week</DropdownMenuRadioItem>
-  //             <DropdownMenuRadioItem value="month">Month</DropdownMenuRadioItem>
-  //             <DropdownMenuRadioItem value="year">Year</DropdownMenuRadioItem>
-  //           </DropdownMenuRadioGroup>
-  //         </DropdownMenuContent>
-  //       </DropdownMenu>
-
-  //       {/* Emotion Visibility Control */}
-  //       <Popover>
-  //         <PopoverTrigger asChild>
-  //           <Button variant="secondary" size="sm" className="gap-2 text-foreground">
-  //             Emotions Shown ({visibleCount}/{totalCount})
-  //           </Button>
-  //         </PopoverTrigger>
-  //         <PopoverContent className="w-80" align="end">
-  //           <div className="grid gap-4">
-  //             <div className="space-y-2">
-  //               <h4 className="font-medium leading-none">Emotion Visibility</h4>
-  //               <p className="text-sm text-muted-foreground">
-  //                 Control which emotion lines are displayed on the chart
-  //               </p>
-  //             </div>
+        {/* Emotion Visibility Control */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="secondary" size="sm" className="gap-2 text-foreground">
+              Emotions Shown ({visibleCount}/{totalCount})
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="end">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Emotion Visibility</h4>
+                <p className="text-sm text-muted-foreground">
+                  Control which emotion lines are displayed on the chart
+                </p>
+              </div>
               
-  //             <div className="flex gap-2 mb-2">
-  //               <Button 
-  //                 variant="outline" 
-  //                 size="sm"
-  //                 onClick={() => toggleAllEmotions(true)}
-  //                 className="flex-1"
-  //               >
-  //                 Show All
-  //               </Button>
-  //               <Button 
-  //                 variant="outline" 
-  //                 size="sm"
-  //                 onClick={() => toggleAllEmotions(false)}
-  //                 className="flex-1"
-  //               >
-  //                 Hide All
-  //               </Button>
-  //             </div>
+              <div className="flex gap-2 mb-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toggleAllEmotions(true)}
+                  className="flex-1"
+                >
+                  Show All
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toggleAllEmotions(false)}
+                  className="flex-1"
+                >
+                  Hide All
+                </Button>
+              </div>
 
-  //             <ScrollArea className="h-[300px] w-full">
-  //               <div className="grid gap-3">
-  //                 {visibleEmotions.map((emotion) => (
-  //                   <div key={emotion.emotion} className="flex items-center space-x-2">
-  //                     <Checkbox
-  //                       id={emotion.emotion}
-  //                       checked={emotion.visible}
-  //                       onCheckedChange={() => toggleEmotionVisibility(emotion.emotion)}
-  //                     />
-  //                     <div className="flex items-center gap-2 flex-1">
-  //                       <div 
-  //                         className="w-3 h-3 rounded-full border"
-  //                         style={{ backgroundColor: emotion.colour }}
-  //                       />
-  //                       <Label 
-  //                         htmlFor={emotion.emotion}
-  //                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize cursor-pointer"
-  //                       >
-  //                         {emotion.emotion}
-  //                       </Label>
-  //                     </div>
-  //                     {emotion.visible ? (
-  //                       <Eye className="h-4 w-4 text-green-600" />
-  //                     ) : (
-  //                       <EyeOff className="h-4 w-4 text-gray-400" />
-  //                     )}
-  //                   </div>
-  //                 ))}
-  //               </div>
-  //             </ScrollArea>
-  //           </div>
-  //         </PopoverContent>
-  //       </Popover>
-  //     </div>
+              <ScrollArea className="h-[300px] w-full">
+                <div className="grid gap-3">
+                  {visibleEmotions.map((emotion) => (
+                    <div key={emotion.emotion} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={emotion.emotion}
+                        checked={emotion.visible}
+                        onCheckedChange={() => toggleEmotionVisibility(emotion.emotion)}
+                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        <div 
+                          className="w-3 h-3 rounded-full border"
+                          style={{ backgroundColor: emotion.colour }}
+                        />
+                        <Label 
+                          htmlFor={emotion.emotion}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize cursor-pointer"
+                        >
+                          {emotion.emotion}
+                        </Label>
+                      </div>
+                      {emotion.visible ? (
+                        <Eye className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
     
-  //     <div className="w-full max-w-5xl h-96 p-4 rounded-lg bg-background border-2">
-  //       <ResponsiveContainer width="100%" height="100%">
-  //         <LineChart data={data}>
-  //           <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
-  //           <XAxis dataKey="name" stroke={"var(--color-muted-foreground"} />
-  //           <YAxis stroke={"var(--color-foreground"} />
-  //           <Tooltip
-  //             contentStyle={{ backgroundColor: "var(--color-card)", border: "none" }}
-  //             labelStyle={{ color: "var(--color-foreground"}}
-  //             itemStyle={{ color: "var(--color-foreground"}}
-  //           />
-  //           {visibleEmotions
-  //             .filter(emotion => emotion.visible)
-  //             .map((emotion: VisibleEmotion) => (
-  //               <Line 
-  //                 key={emotion.emotion}
-  //                 type="monotone" 
-  //                 dataKey={emotion.emotion}
-  //                 stroke={emotion.colour}
-  //                 strokeWidth={3}
-  //                 dot={{fill: emotion.colour}}
-  //               />
-  //             ))}
-  //         </LineChart>
-  //       </ResponsiveContainer>
-  //     </div>
-  //   </div>
-  // );
+      <div className="w-full max-w-5xl h-96 p-4 rounded-lg bg-background border-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
+            <XAxis dataKey="name" stroke={"var(--color-muted-foreground"} />
+            <YAxis stroke={"var(--color-foreground"} />
+            <Tooltip
+              contentStyle={{ backgroundColor: "var(--color-card)", border: "none" }}
+              labelStyle={{ color: "var(--color-foreground"}}
+              itemStyle={{ color: "var(--color-foreground"}}
+            />
+            {visibleEmotions
+              .filter(emotion => emotion.visible)
+              .map((emotion: VisibleEmotion) => (
+                <Line 
+                  key={emotion.emotion}
+                  type="monotone" 
+                  dataKey={emotion.emotion}
+                  stroke={emotion.colour}
+                  strokeWidth={3}
+                  dot={{fill: emotion.colour}}
+                />
+              ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 
