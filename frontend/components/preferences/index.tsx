@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "../ui/button";
 import FileUpload from "./file_upload";
 import { useUser } from "@/hooks/useUser";
+import ThemeSelect from "./theme_select";
 
 export default function PreferencesPage() {
   const user  = useUser();
@@ -12,7 +13,7 @@ export default function PreferencesPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex justify-center items-center">
-        <div className="bg-background border-2  rounded-lg  w-full lg:w-3/5 flex justify-between">
+        <div className="bg-background border-2  rounded-lg  w-full lg:w-2/3 flex justify-between">
           {/* Sidebar */}
           <div className="hidden lg:block  p-5  w-full lg:w-1/4  bg-card rounded-l-lg">
             <div className="flex flex-col w-full ">
@@ -33,7 +34,7 @@ export default function PreferencesPage() {
           {/* Content */}
           <div className="p-5 m-5 mr-3 h-[85vh] w-full lg:w-4/5  bg-background  rounded-sm overflow-y-scroll">
             <div className="h-full flex">
-              <h1>Content</h1>
+              <h2 className="font-bold text-3xl">Account Information</h2>
             </div>
 
             {/* File upload */}
@@ -58,9 +59,9 @@ export default function PreferencesPage() {
             </div>
 
             {/* Colour Theme  */}
-            <div className="h-full flex">
-              <h1 className="text-3xl font-bold">Theme</h1>
-              
+            <div className="h-full flex flex-col">
+              <h2 className="text-3xl font-bold mb-5">Theme</h2>
+              <ThemeSelect />
             </div>
 
           </div>

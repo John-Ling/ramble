@@ -6,6 +6,7 @@ from pymongo import ASCENDING
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from transformers import pipeline, AutoTokenizer
+from functools import wraps
 
 from urllib.parse import unquote
 from dotenv import load_dotenv
@@ -18,6 +19,7 @@ import logging
 
 import emotional_analytics
 from _types import *
+from _utils import *
 
 load_dotenv()
 
@@ -93,6 +95,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# pls pls pls remove this in production
 @app.get("/walao")
 async def delete_all():
     await emotionCollection.delete_many({})
@@ -124,40 +127,6 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
             detail="You are not authorised"
         ) 
     return
-
-async def get_entry_by_name(userID: str, entryName: str):
-    if userCollection is None:
-        return None
-    
-    foundEntry = await userCollection.aggregate([
-        {"$match": {"_id": userID}},
-        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-        {
-            "$match": {
-                "entries.name": entryName
-            }
-        },
-        {"$limit": 1}
-    ]).to_list(1)
-
-    return foundEntry
-
-async def get_entry_by_db_date(userID: str, dbDate: str):
-    if userCollection is None:
-        return None
-    
-    foundEntry = await userCollection.aggregate([
-        {"$match": {"_id": userID}},
-        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-        {
-            "$match": {
-                "entries.createdOn": dbDate
-            }
-        },
-        {"$limit": 1}
-    ]).to_list(1)
-
-    return foundEntry
 
 @app.post("/api/auth/set-access-token/", status_code=status.HTTP_201_CREATED)
 async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
@@ -364,27 +333,9 @@ async def get_entries_before(uid: str, dbDate: str, filterBy: FilterKey = Filter
         {"$sort": {"_dateCreated": -1}}
     ]
 
-    # filter results based on filterKey
-    if filterBy == FilterKey.entry:
-        pipeline.extend([{"$limit": fetchCount}])
-    else:
-        pipeline.extend([
-            {
-                "$addFields": {
-                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": dbDate}}, "unit": filterBy, "amount": fetchCount }}
-                }
-            },
-            {
-                "$match": {
-                "$expr": {
-                        "$gte": ["$_dateCreated", "$_cutoffDate"]
-                    }
-                }
-            }
-        ])
-
+    pipeline = extend_pipeline(pipeline, dbDate, filterBy, fetchCount)
     pipeline.extend([
-        {"$limit": 100},
+        {"$limit": 50},
         {
         "$group": {
             "_id": "$_id",
@@ -419,7 +370,7 @@ async def get_entries(uid: str, dbDate: str, fetchCount: int = 12):
         entries = []
         decoded =  unquote(unquote(dbDate))
         # find the most recent entry with dbDate
-        mostRecentEntry = await get_entry_by_db_date(uid, decoded)
+        mostRecentEntry = await get_entry_by_db_date(userCollection, uid, decoded)
 
         if mostRecentEntry == []:
             # create dummy entry
@@ -488,7 +439,7 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
     decoded =  unquote(unquote(entryName))
     # get uuid for entry
     # try get most recent entry with specific entry name
-    entryReference = await get_entry_by_name(uid, decoded)
+    entryReference = await get_entry_by_name(userCollection, uid, decoded)
 
     if entryReference == [] or entryReference is None:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -535,7 +486,7 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
         # update entries collection
 
         decoded = unquote(unquote(entryName))
-        entryReference = await get_entry_by_name(uid, decoded)
+        entryReference = await get_entry_by_name(userCollection, uid, decoded)
         if entryReference == [] or entryReference is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -567,9 +518,6 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
         detail="Document does not exist"
     )
 
-
-
-
 @app.get("/api/entries/emotion/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
 async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: FilterKey):
     """
@@ -598,7 +546,7 @@ async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: Fil
         )
 
     decoded = unquote(unquote(dbDate))
-    entry =  await get_entry_by_db_date(uid, decoded)
+    entry =  await get_entry_by_db_date(userCollection, uid, decoded)
     if entry is None or entry == []:
         # create dummy entry 
         logger.info("NEED TO CREATE DUMMY ENTRY")
@@ -639,26 +587,8 @@ async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: Fil
         }
     }]
 
-    # filter results based on filterKey
-    if filterBy == FilterKey.entry:
-        pipeline.extend([{"$limit": fetchCount}])
-    else:
-        pipeline.extend([
-            {
-                "$addFields": {
-                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": decoded}}, "unit": filterBy, "amount": fetchCount }}
-                }
-            },
-            {
-                "$match": {
-                    "$expr": {
-                            "$gte": ["$_dateCreated", "$_cutoffDate"]
-                        }
-                }
-            },
-            {"$limit": 20}
-        ])
-
+    pipeline = extend_pipeline(pipeline, decoded, filterBy, fetchCount)
+    pipeline.extend([{"$limit": 20}]) # prevent someone from putting 100 years and crashing my system
     result = await emotionCollection.aggregate(pipeline).to_list()
     if not result:
         raise HTTPException(

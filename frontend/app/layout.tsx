@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from 'next/font/google'
-
 import ProvideSession from "@/components/providers/session_provider";
 import { auth } from "@/lib/auth";
 import "./globals.css";
@@ -31,28 +29,21 @@ export default async function RootLayout({
       <body
         className={` antialiased`}
       >
-        {/* <ThemeProvider
-            attribute="data-theme"
-            themes={[
-            'solarized-dark',
-            'solarized-light',
-            'monokai',
-            'atom-one-light',
-            'atom-one-dark',
-            'everforest-dark',
-            'everforest-light',
-            'tokyo-night',
-            'catppuccin',
-            'nord'
-            ]}
-            defaultTheme="nord"
-            enableSystem
-            disableTransitionOnChange
-        > */}
           <ProvideSession session={session}>
-            {children}
+              {children}
           </ProvideSession>
-        {/* </ThemeProvider> */}
+        <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              const theme = localStorage.getItem("theme");
+              if (theme) {
+                document.body.setAttribute("data-theme", theme);
+              }
+            })();
+          `
+        }}
+      />
       </body>
     </html>
   );
