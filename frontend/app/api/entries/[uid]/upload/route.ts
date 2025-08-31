@@ -22,12 +22,11 @@ export async function POST(req: NextRequest, { params }: RouteParameters) {
         method: "POST",
         headers: {"Authorization": `Bearer ${token?.accessToken}`, "accept": "application/json", "Content-Type": "application/json"},
         body: JSON.stringify({
-            _id: uuidv4() + uid,
             authorID: uid,
             name: filename,
             createdOn: createdOn,
             content: content
-        } as JournalEntryReqBody)
+        })
     });
 
     if (response.ok) {

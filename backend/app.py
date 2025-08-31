@@ -580,7 +580,7 @@ async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credent
     body = entry.model_dump(by_alias=True)
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"http://localhost:8000/api/entries/{uid}/", json=body, 
+            response = await client.post(f"http://localhost:8000/api/entries/{uid}/create/", json=body, 
                                         headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
             response.raise_for_status()
             return {"message": "Uploaded file"}
