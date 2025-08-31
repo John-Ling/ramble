@@ -1,8 +1,9 @@
 "use client";
 import { date_to_db_date } from "@/lib/utils";
-import { FileText} from "lucide-react"
+import { FileText, Upload } from "lucide-react"
 import React, { useState, useRef } from "react";
-import { v4 as uuidv4 } from 'uuid';
+import { flushSync } from 'react-dom';
+
 
 interface FileItem {
   file: File;
@@ -25,7 +26,7 @@ export default function FileUpload({ uid }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function upload_file(file: FileItem) {
-
+    console.log("Uploading file");
     const formData = new FormData(); 
     formData.append("file", file.file);
     formData.append("name", file.name);
@@ -39,33 +40,46 @@ export default function FileUpload({ uid }: FileUploadProps) {
       return;
     }
 
-    const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
-      method: "POST",
-      body: formData,
-    });
+    await new Promise(r => setTimeout(r, 2000));
 
-    if (response.ok) {
-      console.log("Successfully uploaded files");
-    }
+    // const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
+    //   method: "POST",
+    //   body: formData,
+    // });
+
+    // if (response.ok) {
+    //   console.log("Successfully uploaded files");
+    // }
     return;
   }
 
   async function upload_files(files: FileItem[]) {
-    console.log(files);
-
-    files.forEach(async (file: FileItem) => {
-      await upload_file(file);
-    })
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < files.length; i+= BATCH_SIZE) 
+    {
+      const batch = files.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(file => upload_file(file)));
+    }
   }
 
   const on_drag_over = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (!isDragging) {
+      flushSync(() => {
+        console.log("Dragging");
+        setIsDragging(true);
+      })
+
+    }
   };
 
   const on_drag_leave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragging(false);
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      flushSync(() => {
+        setIsDragging(false);
+      });
+    }
   };
 
   const on_drop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -75,15 +89,15 @@ export default function FileUpload({ uid }: FileUploadProps) {
     setUploadStatus(() => "uploading");
     const droppedFiles = Array.from(e.dataTransfer.files);
     const uploadFiles: FileItem[] = [];
-
-    // format name
-    
-
     droppedFiles.forEach((file: File) => {
       const formattedName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
       uploadFiles.push({ file: file, name: formattedName, size: file.size, type: file.type} as FileItem);
     })
     await upload_files(uploadFiles);
+
+    setUploadStatus("success");
+
+    await new Promise(r => setTimeout(r, 3000));
     setUploadStatus(() => "idle");
     return;
   };
@@ -105,18 +119,34 @@ export default function FileUpload({ uid }: FileUploadProps) {
   //   }
   // }
 
+
+  // set file upload message
+
+  let message = "Drag and Drop Files"
+  if (uploadStatus === "uploading") {
+    message = "Uploading...";
+  }
+
+  if (uploadStatus === "success") {
+    message = "Upload Complete";
+  }
+
   return (
     <>
-      <div className="bg-card h-[30vh] w-full lg:w-4/5 flex flex-col justify-center items-center"
-        onClick={() => fileInputRef.current?.click()}
+      <div className={`bg-card h-[30vh] w-full lg:w-4/5 flex flex-col justify-center items-center border-2`}
         onDrop={on_drop}
         onDragLeave={on_drag_leave}
         onDragOver={on_drag_over}
       >
         <h3 className="font-bold text-2xl text-center mb-5">Upload Entries</h3>
         <div className="flex justify-center items-center flex-col">
-          <FileText className={`size-16 ${isDragging ? "text-orange-400" : "" }`} />
-          <p className="mb-5 text-lg">{uploadStatus === "uploading" ? "Uploading..." : "Drag and Drop Files"}</p>
+          {
+            uploadStatus === "uploading" ? 
+            <Upload className={`size-16 ${isDragging ? "text-orange-400" : "" }`} />
+            : 
+            <FileText className={`size-16 ${isDragging ? "text-orange-400" : "" }`} />
+          }
+          <p className="mb-5 text-lg">{message}</p>
         </div>
         <input ref={fileInputRef} id="file-upload" multiple className="hidden" type="file" disabled={uploadStatus === "uploading" ? true : false} />
       </div>

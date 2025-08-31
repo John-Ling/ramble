@@ -25,6 +25,37 @@ class JournalEntry(BaseModel):
 class UpdateJournalEntry(BaseModel):
     content: Optional[str] = None
 
+
+class UpdateJournalEntryEmotionData(BaseModel):
+    neutral: Optional[float] = 0.0
+    admiration: Optional[float] = 0.0
+    amusement: Optional[float] = 0.0
+    anger: Optional[float] = 0.0
+    annoyance: Optional[float] = 0.0
+    approval: Optional[float] = 0.0
+    caring: Optional[float] = 0.0
+    confusion: Optional[float] = 0.0
+    curiosity: Optional[float] = 0.0
+    desire: Optional[float] = 0.0
+    disappointment: Optional[float] = 0.0
+    disapproval: Optional[float] = 0.0
+    disgust: Optional[float] = 0.0
+    embarrassment: Optional[float] = 0.0
+    excitement: Optional[float] = 0.0
+    fear: Optional[float] = 0.0
+    gratitude: Optional[float] = 0.0
+    grief: Optional[float] = 0.0
+    joy: Optional[float] = 0.0
+    love: Optional[float] = 0.0
+    nervousness: Optional[float] = 0.0
+    optimism: Optional[float] = 0.0
+    pride: Optional[float] = 0.0
+    realization: Optional[float] = 0.0
+    relief: Optional[float] = 0.0
+    remorse: Optional[float] = 0.0
+    sadness: Optional[float] = 0.0
+    surprise: Optional[float] = 0.0    
+
 class User(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     entries: List[JournalEntryReference]

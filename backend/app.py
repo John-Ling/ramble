@@ -94,6 +94,7 @@ app.add_middleware(
 
 @app.get("/walao")
 async def delete_all():
+    await emotionCollection.delete_many({})
     await userCollection.delete_many({})
     await entryCollection.delete_many({})
     return {"Done": "walao"}
@@ -256,6 +257,7 @@ async def _insert_entry(entry: JournalEntry, dbDate: str, authorID: str):
 
     emotionData: JournalEntryEmotionData = _create_emotion_data(scores, authorID, dbDate, entryDict["_id"])
     emotionDataDict = emotionData.model_dump(by_alias=True)
+    logger.info(emotionDataDict)
 
     await emotionCollection.insert_one(emotionDataDict)    
     await entryCollection.insert_one(entryDict)
@@ -264,6 +266,7 @@ async def _insert_entry(entry: JournalEntry, dbDate: str, authorID: str):
 def _create_emotion_data(scores, authorID, dbDate, entryID):
     logger.info("SCORES")
     logger.info(scores)
+    logger.info(entryID)
 
     emotionFields = [
         'admiration', 'amusement', 'anger', 'annoyance', 'approval',
@@ -279,11 +282,13 @@ def _create_emotion_data(scores, authorID, dbDate, entryID):
         emotions[emotion] = scores[emotion]
 
     emotionData = JournalEntryEmotionData(
-        id=entryID,
+        _id=entryID,
         authorID=authorID,
         created=dbDate,
         **emotions
     )
+
+    logger.info(emotionData.id)
     return emotionData
 
 
@@ -461,7 +466,7 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
 
 @app.put("/api/entries/{uid}/{entryName}/", status_code=status.HTTP_200_OK)
 async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
-    if entryCollection is None or userCollection is None:
+    if entryCollection is None or userCollection is None or emotionCollection is None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Entry or User collection is Null"
@@ -471,19 +476,13 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
 
     logger.info("UPDATING ENTRY")
 
-    writeEntry = {
+    updateEntry = {
         k: v for k, v in updated.model_dump(by_alias=True).items() if v is not None
     }
 
-    if len(writeEntry) >= 1:
+    if len(updateEntry) >= 1:
         # at least one field needs to be updated
         # update entries collection
-
-        # add code for processing emotions here
-        logger.info("PROCESSING EMOTIONS")
-
-        chunks = emotional_analytics.generate_chunks(writeEntry["content"], tokeniser)
-        scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
 
         # get uuid to update
         foundEntry = await userCollection.aggregate([
@@ -496,10 +495,26 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
             },
             {"$limit": 1}
         ]).to_list(1)
-        entryUUID = str(foundEntry[0]["entries"]["_id"])        
 
-        updateResult = await entryCollection.find_one_and_update({"_id": entryUUID}, {"$set": writeEntry})
-        if updateResult is not None:
+        if foundEntry == []:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Could not  find entry"
+            )
+    
+        entryUUID = str(foundEntry[0]["entries"]["_id"])        
+        authorID = str(foundEntry[0]["entries"]["authorID"])
+        dbDate = str(foundEntry[0]["entries"]["dbDate"])
+
+        # update emotion scores 
+        logger.info("UPDATING EMOTIONS")
+
+        chunks = emotional_analytics.generate_chunks(updateEntry["content"], tokeniser)
+        scores = emotional_analytics.calculate_emotion_scores(chunks, classifier)
+        emotionData = _create_emotion_data(scores, authorID, dbDate, entryUUID)
+        updateEmotionRes = await emotionCollection.find_one_and_replace({"_id": entryUUID}, {"$set": emotionData.model_dump(by_alias=True)})
+        updateEntryRes = await entryCollection.find_one_and_update({"_id": entryUUID}, {"$set": updateEntry})
+        if updateEntryRes is not None and updateEmotionRes is not None:
             return { "message": "yippie"}
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

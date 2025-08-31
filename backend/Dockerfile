@@ -11,6 +11,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN /bin/uv sync --frozen --no-dev
-COPY . ./
+COPY *.py ./
 EXPOSE 8000
 CMD ["uv", "run", "app.py"]
