@@ -1,4 +1,5 @@
 from pydantic import BaseModel, BeforeValidator, Field
+from enum import Enum
 from typing import Optional, Annotated, List
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -24,7 +25,6 @@ class JournalEntry(BaseModel):
 
 class UpdateJournalEntry(BaseModel):
     content: Optional[str] = None
-
 
 class UpdateJournalEntryEmotionData(BaseModel):
     neutral: Optional[float] = 0.0
@@ -64,6 +64,14 @@ class User(BaseModel):
 class AccessToken(BaseModel):
     sub: str
     token: str
+
+
+class FilterKey(str, Enum):
+    entry = "entry"
+    day = "day"
+    week = "week"
+    month = "month"
+    year = "year"
 
 
 class JournalEntryEmotionData(BaseModel):

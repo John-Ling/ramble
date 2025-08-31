@@ -125,6 +125,40 @@ async def check_auth(uid: str, credentials: HTTPAuthorizationCredentials = Depen
         ) 
     return
 
+async def get_entry_by_name(userID: str, entryName: str):
+    if userCollection is None:
+        return None
+    
+    foundEntry = await userCollection.aggregate([
+        {"$match": {"_id": userID}},
+        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+        {
+            "$match": {
+                "entries.name": entryName
+            }
+        },
+        {"$limit": 1}
+    ]).to_list(1)
+
+    return foundEntry
+
+async def get_entry_by_db_date(userID: str, dbDate: str):
+    if userCollection is None:
+        return None
+    
+    foundEntry = await userCollection.aggregate([
+        {"$match": {"_id": userID}},
+        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+        {
+            "$match": {
+                "entries.createdOn": dbDate
+            }
+        },
+        {"$limit": 1}
+    ]).to_list(1)
+
+    return foundEntry
+
 @app.post("/api/auth/set-access-token/", status_code=status.HTTP_201_CREATED)
 async def set_access_token(accessToken: AccessToken, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     if redisStore is None:
@@ -308,7 +342,6 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
                 }
             }
         },
-        {"$sort": {"entries._dateCreated": 1}},    
         {
             "$addFields": {
                 "entries._beforeTarget": {
@@ -359,31 +392,16 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
         # try getting the first entry with specific dbDate
         logger.info("Getting first entry");
         logger.info(dbDate);
-
         entries = []
-
         decoded =  unquote(unquote(dbDate))
-
-
         # find the most recent entry with dbDate
-        entry = await userCollection.aggregate([
-            {"$match": {"_id": uid}},
-            {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-            {
-                "$match": {
-                    "entries.createdOn": decoded
-                }
-            },
-            {"$limit": 1}
-        ]).to_list(1)
+        mostRecentEntry = await get_entry_by_db_date(uid, decoded)
 
-        logger.info(entry)
-
-        if entry == []:
+        if mostRecentEntry == []:
             # create dummy entry
             logger.info("No entry found")
-            # format dbDate 
 
+            # format dbDate 
             components = decoded.split('-')
             formatted = f"{components[2]:02d}/{components[1]:02d}/{components[0]:04d}"
             entries = [{"_id": decoded, "createdOn": decoded, "name": formatted, "favourite": False}]        
@@ -445,26 +463,16 @@ async def get_entry(uid: str, entryName: str, response: Response, credentials: H
     await check_auth(uid, credentials)
     decoded =  unquote(unquote(entryName))
     # get uuid for entry
-    # entryReference: JournalEntryReference = await _get_entry(uid, dbDate)
     # try get most recent entry with specific entry name
-    foundEntry = await userCollection.aggregate([
-        {"$match": {"_id": uid}},
-        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-        {
-            "$match": {
-                "entries.name": decoded
-            }
-        },
-        {"$limit": 1}
-    ]).to_list(1)
+    entryReference = await get_entry_by_name(uid, decoded)
 
-    if foundEntry == []:
+    if entryReference == [] or entryReference is None:
         response.status_code = status.HTTP_404_NOT_FOUND
         return None
 
-    logger.info(foundEntry)
+    logger.info(entryReference)
     
-    entryUUID = str(foundEntry[0]["entries"]["_id"])
+    entryUUID = str(entryReference[0]["entries"]["_id"])
     logger.info(entryUUID)
 
     # # search db for content using uuid 
@@ -503,27 +511,17 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
         # update entries collection
 
         decoded = unquote(unquote(entryName))
-        # get uuid to update
-        foundEntry = await userCollection.aggregate([
-            {"$match": {"_id": uid}},
-            {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-            {
-                "$match": {
-                    "entries.name": decoded
-                }
-            },
-            {"$limit": 1}
-        ]).to_list(1)
-
-        if foundEntry == []:
+        entryReference = await get_entry_by_name(uid, decoded)
+        if entryReference == [] or entryReference is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Could not find entry"
             )
-    
-        entryUUID = str(foundEntry[0]["entries"]["_id"])        
-        authorID = str(foundEntry[0]["entries"]["authorID"])
-        dbDate = str(foundEntry[0]["entries"]["dbDate"])
+
+        # get detailed needed to update
+        entryUUID = str(entryReference[0]["entries"]["_id"])        
+        authorID = str(entryReference[0]["entries"]["authorID"])
+        dbDate = str(entryReference[0]["entries"]["dbDate"])
 
         # update emotion scores 
         logger.info("UPDATING EMOTIONS")
@@ -546,8 +544,10 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
     )
 
 
+
+
 @app.get("/api/entries/emotion/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
-async def  get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: str):
+async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: FilterKey):
     """
     Returns n number of emotion data points based on a filterKey going backwards
     from the first entry created on dbDate
@@ -561,16 +561,96 @@ async def  get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: s
 
     Filtering via day, week, month or year involves checking the createdAttribute and determining if the difference
     from the start entry's creation date exceeds the n value specified
+
+    dbDate is double uri encoded  
     """
 
-    # check if entryName exists 
+    # check if an entry created on dbDate exists
 
-    
+    decoded = unquote(unquote(dbDate))
+    entry =  await get_entry_by_db_date(uid, decoded)
+    if entry is None or entry == []:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document does not exist"
+        )
 
-
+    # go get n entries that fulfil that key 
+    await get_emotion_data_before(uid, decoded, filterKey, fetchCount=fetchCount)
     return {"status": "completed : ) "}
 
 
+
+async def get_emotion_data_before(uid: str, dbDate: str, filterKey: FilterKey = FilterKey.entry,  fetchCount: int = 5, ):
+    """
+    Returns fetchCount counts of emotion data starting from dbDate going backward
+    Filter key is used to determine what subset we are allowed to take
+    """
+    if userCollection is None:
+        return (None, None)
+    
+    pipeline = [
+        {"$match": {"_id": uid}},
+        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
+        {
+            "$addFields": {
+                "_dateCreated": {
+                    "$dateFromString": {
+                        "dateString": "$entries.createdOn"
+                    }
+                }
+            }
+        },
+        {
+            "$addFields": {
+                "_beforeTarget": {
+                    "$lte": ["$_dateCreated", {
+                        "$dateFromString": { "dateString": dbDate }
+                    }]
+                }
+            }
+        },
+        {
+            "$match": {
+                "_beforeTarget": True
+            }
+        },
+        {"$sort": {"_dateCreated": -1}}
+    ]
+
+    # filter results based on filterKey
+    if filterKey == FilterKey.entry:
+        pipeline.extend([{"$limit": fetchCount}])
+    else:
+        pipeline.extend([
+            {
+                "$addFields": {
+                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": dbDate}}, "unit": filterKey, "amount": fetchCount }}
+                }
+            },
+            {
+                "$match": {
+                "$expr": {
+                        "$gte": ["$_dateCreated", "$_cutoffDate"]
+                    }
+                }
+            }
+        ])
+
+    pipeline.extend([{
+        "$group": {
+            "_id": "$_id",
+            "entries": {"$push": "$entries"},
+        }
+    }])
+
+    logger.info("Running pipeline")    
+    result = await userCollection.aggregate(pipeline).to_list(1)
+    logger.info(result);
+    if not result:
+        return (None, None)
+
+    return result[0].get("entries", [JournalEntryReference])
 
 
 @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)

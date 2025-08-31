@@ -186,8 +186,9 @@ export default function JournalPage() {
           <div className="flex justify-between">
             <h1 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h1>
             <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+            {/* <VoiceRecorder /> */}
           </div>
-          <VoiceRecorder />
+          
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={fetched.isLoading || readOnly} 
                     placeholder={`${fetched.isLoading ? "Loading..." : "What's on your mind?"}`}  
