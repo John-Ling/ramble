@@ -328,14 +328,19 @@ def _create_emotion_data(scores, authorID, dbDate, entryID):
     return emotionData
 
 
-async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
-    logger.info("Getting entries before")
+async def get_entries_before(uid: str, dbDate: str, filterBy: FilterKey = FilterKey.entry, fetchCount: int = 12):
+    """
+    Aggregate pipeline for getting entry references before
+    """
+    if userCollection is None:
+        return (None, None)
+    
     pipeline = [
         {"$match": {"_id": uid}},
         {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
         {
             "$addFields": {
-                "entries._dateCreated": {
+                "_dateCreated": {
                     "$dateFromString": {
                         "dateString": "$entries.createdOn"
                     }
@@ -344,8 +349,8 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
         },
         {
             "$addFields": {
-                "entries._beforeTarget": {
-                    "$lte": ["$entries._dateCreated", {
+                "_beforeTarget": {
+                    "$lte": ["$_dateCreated", {
                         "$dateFromString": { "dateString": dbDate }
                     }]
                 }
@@ -353,33 +358,52 @@ async def get_entries_before(uid: str, dbDate: str, fetchCount: int = 12):
         },
         {
             "$match": {
-                "entries._beforeTarget": True
+                "_beforeTarget": True
             }
         },
-        {"$sort": {"entries._dateCreated": -1}},
-        {"$limit": fetchCount + 1},  
-        {
-            "$group": {
-                "_id": "$_id",
-                "entries": {"$push": "$entries"},
-                "entryCount": {"$sum": 1}
-            }
-        } 
+        {"$sort": {"_dateCreated": -1}}
     ]
 
-    if userCollection is None:
-        return (None, None)
+    # filter results based on filterKey
+    if filterBy == FilterKey.entry:
+        pipeline.extend([{"$limit": fetchCount}])
+    else:
+        pipeline.extend([
+            {
+                "$addFields": {
+                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": dbDate}}, "unit": filterBy, "amount": fetchCount }}
+                }
+            },
+            {
+                "$match": {
+                "$expr": {
+                        "$gte": ["$_dateCreated", "$_cutoffDate"]
+                    }
+                }
+            }
+        ])
 
+    pipeline.extend([
+        {"$limit": 100},
+        {
+        "$group": {
+            "_id": "$_id",
+            "entries": {"$push": "$entries"},
+            "entryCount": {"$sum": 1}
+        }
+    }])
+
+    logger.info("Running pipeline")    
     result = await userCollection.aggregate(pipeline).to_list(1)
     if not result:
         return (None, None)
 
-    return ( result[0].get("entries", [JournalEntryReference]), result[0].get("entryCount", int) )
+    return (result[0].get("entries"), result[0].get("entryCount") + 1)
 
 @app.get("/api/entries/{uid}/{dbDate}/{fetchCount}/", status_code=status.HTTP_200_OK)
-async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
+async def get_entries(uid: str, dbDate: str, fetchCount: int = 12):
     """
-    Given a specific db date try and get fetchCount entries before it including itself
+    Given a specific db date try and get fetchCount entry references before it including itself
     """
     
     if userCollection is None:
@@ -403,7 +427,7 @@ async def get_entry_references(uid: str, dbDate: str, fetchCount: int = 12):
 
             # format dbDate 
             components = decoded.split('-')
-            formatted = f"{components[2]:02d}/{components[1]:02d}/{components[0]:04d}"
+            formatted = f"{components[2]:02}/{components[1]:02}/{components[0]:04}"
             entries = [{"_id": decoded, "createdOn": decoded, "name": formatted, "favourite": False}]        
 
         logger.info(entries)
@@ -547,7 +571,7 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
 
 
 @app.get("/api/entries/emotion/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
-async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: FilterKey):
+async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: FilterKey):
     """
     Returns n number of emotion data points based on a filterKey going backwards
     from the first entry created on dbDate
@@ -567,91 +591,82 @@ async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterKey: Fi
 
     # check if an entry created on dbDate exists
 
+    if emotionCollection is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Emotion collection is not initialised"
+        )
+
     decoded = unquote(unquote(dbDate))
     entry =  await get_entry_by_db_date(uid, decoded)
     if entry is None or entry == []:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document does not exist"
-        )
+        # create dummy entry 
+        logger.info("NEED TO CREATE DUMMY ENTRY")
 
     # go get n entries that fulfil that key 
-    await get_emotion_data_before(uid, decoded, filterKey, fetchCount=fetchCount)
-    return {"status": "completed : ) "}
-
-
-
-async def get_emotion_data_before(uid: str, dbDate: str, filterKey: FilterKey = FilterKey.entry,  fetchCount: int = 5, ):
-    """
-    Returns fetchCount counts of emotion data starting from dbDate going backward
-    Filter key is used to determine what subset we are allowed to take
-    """
-    if userCollection is None:
-        return (None, None)
-    
     pipeline = [
-        {"$match": {"_id": uid}},
-        {"$unwind": {"path": "$entries", "includeArrayIndex": "entryIndex"}},
-        {
-            "$addFields": {
-                "_dateCreated": {
-                    "$dateFromString": {
-                        "dateString": "$entries.createdOn"
+    {
+        '$match': {
+            'authorID': uid
+        }
+    }, {
+        '$addFields': {
+            '_dateCreated': {
+                '$dateFromString': {
+                    'dateString': '$created'
+                }
+            }
+        }
+    }, {
+        '$addFields': {
+            '_beforeTarget': {
+                '$lte': [
+                    '$_dateCreated', {
+                        '$dateFromString': {
+                            'dateString': decoded
+                        }
                     }
-                }
+                ]
             }
-        },
-        {
-            "$addFields": {
-                "_beforeTarget": {
-                    "$lte": ["$_dateCreated", {
-                        "$dateFromString": { "dateString": dbDate }
-                    }]
-                }
-            }
-        },
-        {
-            "$match": {
-                "_beforeTarget": True
-            }
-        },
-        {"$sort": {"_dateCreated": -1}}
-    ]
+        }
+    }, {
+        '$match': {
+            '_beforeTarget': True
+        }
+    }, {
+        '$sort': {
+            '_dateCreated': -1
+        }
+    }]
 
     # filter results based on filterKey
-    if filterKey == FilterKey.entry:
+    if filterBy == FilterKey.entry:
         pipeline.extend([{"$limit": fetchCount}])
     else:
         pipeline.extend([
             {
                 "$addFields": {
-                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": dbDate}}, "unit": filterKey, "amount": fetchCount }}
+                    "_cutoffDate": {"$dateSubtract": { "startDate": {"$dateFromString": {"dateString": decoded}}, "unit": filterBy, "amount": fetchCount }}
                 }
             },
             {
                 "$match": {
-                "$expr": {
-                        "$gte": ["$_dateCreated", "$_cutoffDate"]
-                    }
+                    "$expr": {
+                            "$gte": ["$_dateCreated", "$_cutoffDate"]
+                        }
                 }
-            }
+            },
+            {"$limit": 20}
         ])
 
-    pipeline.extend([{
-        "$group": {
-            "_id": "$_id",
-            "entries": {"$push": "$entries"},
-        }
-    }])
-
-    logger.info("Running pipeline")    
-    result = await userCollection.aggregate(pipeline).to_list(1)
-    logger.info(result);
+    result = await emotionCollection.aggregate(pipeline).to_list()
     if not result:
-        return (None, None)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not get emotion data"
+        )
 
-    return result[0].get("entries", [JournalEntryReference])
-
+    return {"datapoints": result}
 
 @app.post("/api/entries/{uid}/upload/", status_code=status.HTTP_201_CREATED)
 async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
