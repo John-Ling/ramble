@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ChangeEvent } from "react";
 import {
   LineChart,
   Line,
@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 import { Button } from "@/components/ui/button";
-import { ListFilter, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, FilterIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -32,54 +32,46 @@ import {
 } from "@/components/ui/popover"
 
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+import EmotionPlotGraph from "./emotion_plot_graph";
+
+import useSWR from "swr";
+import { User } from "next-auth";
+import { date_to_db_date, double_encode } from "@/lib/utils";
+
+import { useUser } from "@/hooks/useUser";
+
+
+interface EmotionPlotProps {
+  dbDate: string;
+  fetchCount: number;
+  filterBy: string;
+}
 
 export default function EmotionPlot() {
-    const data: DataPoint[] = [ 
-    create_data_point({name: "01/01/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
-  create_data_point({name: "15/01/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
-  create_data_point({name: "29/01/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
-  create_data_point({name: "12/02/2024", amusement: 0.78, optimism: 0.65, confusion: 0.35, approval: 0.02, joy: 0.01}),
-  create_data_point({name: "26/02/2024", joy: 0.99, amusement: 0.63, annoyance: 0.14, disapproval: 0.1, optimism: 0.05, anger: 0.02}),
-  create_data_point({name: "11/03/2024", fear: 0.9, approval: 0.68, optimism: 0.56, confusion: 0.5, neutral: 0.19, amusement: 0.14, annoyance: 0.07, disgust: 0.05, desire: 0.03, realisation: 0.03, anger: 0.02}),
-  create_data_point({name: "25/03/2024", amusement: 0.71, disapproval: 0.64, annoyance: 0.54, optimism: 0.33, confusion: 0.03, realisation: 0.03, desire: 0.02, curiosity: 0.019, disgust: 0.01, admiration: 0.01, joy: 0.01, nervousness: 0.01, disappointment: 0.01, fear: 0.01, sadness: 0.01}),
-  create_data_point({name: "08/04/2024", amusement: 0.92, optimism: 0.62, love: 0.37, admiration: 0.35, joy: 0.3, annoyance: 0.28, anger: 0.2, realisation: 0.1, confusion: 0.05, disappointment: 0.03, embarrassment: 0.02, disgust: 0.02}),
-  ];
-
+  const user = useUser();
   // Initialize visible emotions with visibility state
   const [visibleEmotions, setVisibleEmotions] = useState<VisibleEmotion[]>(() => 
-    defaultGraphEmotions.map(emotion => ({ ...emotion, visible: true }))
+    defaultGraphEmotions.map(emotion => ({ ...emotion, visible: !emotion.hidden }))
   );
 
-  const [darkMode, setDarkMode] = useState(true);
-  const [loading, setLoading] = useState<boolean>(true);
+  const todayDbDate = date_to_db_date(new Intl.DateTimeFormat("en-US").format(new Date()));
 
-  // filter by past n entries, past n weeks  months and past n years
-  const [filterBy, setFilterBy] = useState<"day" | "week" | "month" | "year">("week");
+  const [filterCount, setFilterCount] = useState<number>(5);
 
-  const colors = darkMode
-  ? {
-      bg: "#1e1e2f",
-      text: "#e5e7eb",
-      grid: "#374151",
-      line: "#60a5fa",
-    }
-  : {
-      bg: "#ffffff",
-      text: "#111827",
-      grid: "#d1d5db",
-      line: "#3b82f6",
-    };
+  // filter by past n entries, past n weeks  months and  years
+  const [filterBy, setFilterBy] = useState<"entry" | "day" | "week" | "month" | "year">("entry");
 
   const on_dropdown_value_change = (filter: string) => {
-    if (filter === "day" || filter === "week" || filter === "month" || filter === "year")
-    {
+    if (filter === "day" || filter === "week" || filter === "month" || filter === "year" || filter === "entry") {
       setFilterBy(filter);
+      setFilterCount(1);
     }
-  }
+}
 
-  const toggleEmotionVisibility = (emotionName: string) => {
+  const toggle_emotion_visibility = (emotionName: string) => {
     setVisibleEmotions(prev => 
       prev.map(emotion => 
         emotion.emotion === emotionName 
@@ -89,37 +81,111 @@ export default function EmotionPlot() {
     );
   };
 
-  const toggleAllEmotions = (visible: boolean) => {
+  const toggle_all_emotions = (visible: boolean) => {
     setVisibleEmotions(prev => 
       prev.map(emotion => ({ ...emotion, visible }))
     );
   };
 
+
+  const on_input_change = (e: ChangeEvent<HTMLInputElement>) => {
+
+    let parsed = parseInt(e.target.value);
+
+    if (isNaN(parsed)) {
+      // stop the change
+      return;
+    }
+
+    let limit = 0;
+
+    switch(filterBy)
+    {
+      
+      case "entry":
+        limit =31;
+        break;
+      case "day":
+        limit = 31;
+        break;
+      case "week":
+        limit = 8;
+        break;
+      case "month":
+        limit = 4;
+        break;
+      case "year":
+        limit = 1;
+        break;
+    }
+
+    if (parsed > limit)
+    {
+      return;
+    }
+
+    setFilterCount(parsed);
+    return;
+  }
+
   const visibleCount = visibleEmotions.filter(e => e.visible).length;
   const totalCount = visibleEmotions.length;
 
+
+  const fetched = useLoadedEmotionData(user, todayDbDate, filterCount, filterBy);
+
+  useEffect(() => {
+    if (fetched.data) {
+      console.log(fetched.data);
+    } else  {
+      console.log("No data");
+    }
+  }, [fetched.data])
+
+
+
+  let label = "entries";
+
+  switch(filterBy){
+    case "day":
+      label = "days";
+      break;
+    case "week":
+      label = "weeks";
+      break;
+    case "month":
+      label = "months";
+      break;
+    case "year":
+      label = "year";
+      break;
+  }
+
+
   return (
-    <div
-    > 
+    <>
+      <h2 className="text-2xl font-bold mb-4">Emotion data for the past {filterCount} {label}</h2>
       <div className="flex gap-2 mb-4">
-        {/* Filter Dropdown */}
+        {/* filter Dropdown */}
+        <Input className="w-[15ch] bg-card" type="text" onChange={on_input_change} value={filterCount}  placeholder="Filter Count"/>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <Button variant="secondary" size="icon" className="size-8" ><ListFilter /></Button>
+            <Button variant="secondary" className="text-foreground"  > <FilterIcon/> {filterBy}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Filter By</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup value={filterBy} onValueChange={on_dropdown_value_change}>
-              <DropdownMenuRadioItem value="day">Day</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="week">Week</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="month">Month</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="year">Year</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="entry">Entries</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="day">Days</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="week">Weeks</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="month">Months</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="year">Years</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Emotion Visibility Control */}
+        {/* emotion visibility panel */}
         <Popover>
           <PopoverTrigger>
             <Button variant="secondary" size="sm" className="gap-2 text-foreground">
@@ -136,7 +202,7 @@ export default function EmotionPlot() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => toggleAllEmotions(true)}
+                  onClick={() => toggle_all_emotions(true)}
                   className="flex-1"
                 >
                   Show All
@@ -144,7 +210,7 @@ export default function EmotionPlot() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => toggleAllEmotions(false)}
+                  onClick={() => toggle_all_emotions(false)}
                   className="flex-1"
                 >
                   Hide All
@@ -158,7 +224,7 @@ export default function EmotionPlot() {
                       <Checkbox
                         id={emotion.emotion}
                         checked={emotion.visible}
-                        onCheckedChange={ () => toggleEmotionVisibility(emotion.emotion) }
+                        onCheckedChange={ () => toggle_emotion_visibility(emotion.emotion) }
                       />
                       <div className="flex items-center gap-2 flex-1">
                         <div 
@@ -181,129 +247,44 @@ export default function EmotionPlot() {
           </PopoverContent>
         </Popover>
       </div>
-    
-      {/* maximum 12 labelled points but  */}
-      <div className="w-full max-w-6xl h-96 p-4 rounded-lg bg-background border-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid stroke={colors.grid} strokeDasharray="3 3" />
-            <XAxis dataKey="name" stroke={"var(--color-muted-foreground"} />
-            <YAxis stroke={"var(--color-foreground"} />
-            <Tooltip
-              contentStyle={{ backgroundColor: "var(--color-card)", border: "none" }}
-              labelStyle={{ color: "var(--color-foreground"}}
-              itemStyle={{ color: "var(--color-foreground"}}
-            />
-            {visibleEmotions
-              .filter(emotion => emotion.visible)
-              .map((emotion: VisibleEmotion) => (
-                <Line 
-                  key={emotion.emotion}
-                  type="monotone" 
-                  dataKey={emotion.emotion}
-                  stroke={emotion.colour}
-                  strokeWidth={3}
-                  dot={{fill: emotion.colour}}
-                />
-              ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+    {/* maximum 12 labelled points but  */}
+    <EmotionPlotGraph data={fetched.data} visibleEmotions={visibleEmotions} isLoading={fetched.isLoading} />
+    </>
   );
 }
 
+function useLoadedEmotionData(user: User | null, dbDate: string, fetchCount: number, filterBy: string) {
+  const uid = user?.id;
+  const fetcher = (url: string) => fetch(url).then(r => r.json());  
+  const { data, mutate, error, isLoading } = useSWR(uid && dbDate && fetchCount && filterBy ? `/api/dashboard/emotions/${uid}/${double_encode(dbDate)}/${fetchCount}?filterBy=${filterBy}` : null, fetcher,  {
+    dedupingInterval: 5000,
+    revalidateOnFocus: false
+  });
 
-interface DataPoint {
-  name: string;
-  neutral: number;
-  joy: number;
-  love: number;
-  gratitude: number;
-  excitement: number;
-  relief: number;
-  fear: number;
-  amusement: number;
-  disgust: number;
-  caring: number;
-  grief: number;
-  anger: number;
-  disappointment: number;
-  remorse: number;
-  embarrassment: number;
-  curiosity: number;
-  nervousness: number;
-  desire: number;
-  approval: number;
-  confusion: number;
-  optimism: number;
-  surprise: number;
-  annoyance: number;
-  sadness: number;
-  disapproval: number;
-  realisation: number;
-  admiration: number;
+  return { data: data, mutate, error, isLoading };
 }
-
-
-interface VisibleEmotion extends GraphEmotion {
-  visible: boolean;
-}
-
-function create_data_point(options: Partial<DataPoint>): DataPoint {
-  return {
-    name: options.name || "",
-    neutral: options.neutral || 0,
-    joy: options.joy || 0,
-    love: options.love || 0,
-    gratitude: options.gratitude || 0,
-    excitement: options.excitement || 0,
-    relief: options.relief || 0,
-    fear:  options.fear || 0,
-    amusement: options.amusement || 0,
-    disgust: options.disgust || 0,
-    caring: options.caring || 0,
-    grief: options.grief || 0,
-    anger: options.anger || 0,
-    disappointment: options.disappointment || 0,
-    remorse: options.remorse || 0,
-    embarrassment: options.embarrassment || 0,
-    curiosity: options.curiosity || 0,
-    nervousness: options.nervousness || 0,
-    desire: options.desire || 0,
-    approval: options.approval || 0,
-    confusion: options.confusion || 0,
-    optimism: options.optimism || 0,
-    annoyance: options.annoyance || 0,
-    sadness: options.sadness || 0,
-    disapproval: options.disapproval || 0,
-    realisation: options.realisation || 0,
-    admiration: options.admiration || 0,
-  } as DataPoint
-}
-
 
 
 const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "amusement",
         colour: "var(--color-chart-1)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "confusion",
         colour: "var(--color-chart-2)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "realization",
         colour: "var(--color-chart-3)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "optimism",
         colour: "var(--color-chart-4)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "joy",
@@ -313,7 +294,7 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "curiosity",
         colour: "var(--color-chart-6)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "sadness",
@@ -323,12 +304,12 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "desire",
         colour: "var(--color-chart-8)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "disappointment",
         colour: "var(--color-chart-9)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "embarrassment",
@@ -348,7 +329,7 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "annoyance",
         colour: "var(--color-chart-13)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "nervousness",
@@ -358,37 +339,37 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "love",
         colour: "var(--color-chart-15)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "disapproval",
         colour: "var(--color-chart-16)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "relief",
         colour: "var(--color-chart-17)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "remorse",
         colour: "var(--color-chart-18)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "grief",
         colour: "var(--color-chart-19)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "caring",
         colour: "var(--color-chart-20)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "gratitude",
         colour: "var(--color-chart-21)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "disgust",
@@ -398,12 +379,12 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "surprise",
         colour: "var(--color-chart-23)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "admiration",
         colour: "var(--color-chart-24)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "fear",
@@ -413,16 +394,16 @@ const defaultGraphEmotions: GraphEmotion[]  = [
     {
         emotion: "approval",
         colour: "var(--color-chart-26)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "excitement",
         colour: "var(--color-chart-27)",
-        hidden: false
+        hidden: true
     },
     {
         emotion: "pride",
         colour: "var(--color-chart-28)",
-        hidden: false
+        hidden: true
     },
 ]

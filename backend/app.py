@@ -518,8 +518,8 @@ async def update_entry(uid: str, entryName: str, updated: UpdateJournalEntry = B
         detail="Document does not exist"
     )
 
-@app.get("/api/entries/emotion/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
-async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: FilterKey):
+@app.get("/api/dashboard/emotions/{uid}/{dbDate}/{fetchCount}", status_code=status.HTTP_200_OK)
+async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: FilterKey, credentials: HTTPAuthorizationCredentials = Depends(bearerScheme)):
     """
     Returns n number of emotion data points based on a filterKey going backwards
     from the first entry created on dbDate
@@ -544,6 +544,9 @@ async def get_emotion_data(uid: str, dbDate: str, fetchCount: int, filterBy: Fil
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Emotion collection is not initialised"
         )
+    
+
+    await check_auth(uid, credentials)
 
     decoded = unquote(unquote(dbDate))
     entry =  await get_entry_by_db_date(userCollection, uid, decoded)
@@ -608,7 +611,7 @@ async def upload_entry(uid: str, entry: JournalEntryReqBody = Body(...), credent
             response = await client.post(f"http://localhost:8000/api/entries/{uid}/create/", json=body, 
                                         headers={"Authorization": f"Bearer {credentials.credentials}", "Content-Type": "application/json"})
             response.raise_for_status()
-            return {"message": "Uploaded file"}
+            return {"status": "Uploaded file"}
         except httpx.HTTPError as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

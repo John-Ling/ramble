@@ -8,7 +8,6 @@ export default function ThemeSelect() {
   function selectTheme(theme: string) {
     console.log("SEtting theme to ", theme);
     // format theme name into data-theme compatible format
-
     const formatted = theme.toLowerCase().replace(' ', '-');
     document.body.setAttribute("data-theme", formatted);
     localStorage.setItem("theme", formatted);

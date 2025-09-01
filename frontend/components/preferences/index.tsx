@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import FileUpload from "./file_upload";
 import { useUser } from "@/hooks/useUser";
 import ThemeSelect from "./theme_select";
+import TemplatesSelect from "./templates_select";
 
 export default function PreferencesPage() {
   const user  = useUser();
@@ -44,18 +45,19 @@ export default function PreferencesPage() {
 
             {/* Privacy settings */}
             <div className="h-full flex ">
-              <h1>Content</h1>
+              <h2 className="text-3xl font-bold mb-5">Privacy</h2>
             </div>
 
             {/* Templates */}
-            <div className="h-full flex">
-              <h1>Content</h1>
+            <div className="h-full flex flex-col">
+              <h2 className="text-3xl font-bold mb-5">Templates</h2>
+              <TemplatesSelect />
             </div>
 
 
             {/* Language  */}
             <div className="h-full flex">
-              <h1>Content</h1>
+              <h2 className="text-3xl font-bold mb-5">Language</h2>
             </div>
 
             {/* Colour Theme  */}

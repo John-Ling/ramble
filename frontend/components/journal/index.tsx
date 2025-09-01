@@ -137,11 +137,7 @@ export default function JournalPage() {
     return;
   }
 
-  // const trigger_theme = () => {
-  //   document.body.setAttribute("data-theme", "gruvbox");
-  // }
-
-  let fetched = useLoadedEntry(user, entryName);
+  const fetched = useLoadedEntry(user, entryName);
 
   useEffect(() => {
     if (!fetched.data) {

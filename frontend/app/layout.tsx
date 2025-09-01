@@ -35,12 +35,12 @@ export default async function RootLayout({
         <script
         dangerouslySetInnerHTML={{
           __html: `
-            (function() {
+            (() => {
               const theme = localStorage.getItem("theme");
               if (theme) {
                 document.body.setAttribute("data-theme", theme);
               }
-            })();
+            });
           `
         }}
       />
