@@ -25,7 +25,7 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <html lang="en" suppressHydrationWarning data-theme="nord">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={` antialiased`}
       >
@@ -37,9 +37,7 @@ export default async function RootLayout({
           __html: `
             (() => {
               const theme = localStorage.getItem("theme");
-              if (theme) {
-                document.body.setAttribute("data-theme", theme);
-              }
+              document.body.setAttribute("data-theme", theme);
             });
           `
         }}

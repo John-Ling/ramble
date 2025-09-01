@@ -25,7 +25,6 @@ export default function SettingsMenu({on_entries = undefined, on_prefs = undefin
         <DropdownMenuContent>
           <DropdownMenuItem disabled={!on_entries} onClick={on_entries}>Select Entry</DropdownMenuItem>
           <DropdownMenuItem disabled={!on_dashboard} onClick={on_dashboard}>Dashboard</DropdownMenuItem>
-          <DropdownMenuItem disabled={true}>Conversation Mode</DropdownMenuItem>
           <DropdownMenuItem disabled={!on_prefs} onClick={on_prefs}>Preferences</DropdownMenuItem>
           <DropdownMenuItem disabled={!on_logout} onClick={on_logout}><LogOut /> Log Out</DropdownMenuItem>
         </DropdownMenuContent>

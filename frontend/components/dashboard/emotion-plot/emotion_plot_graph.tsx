@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EmotionPlotGraphProps {
   data?: EmotionDataAPIResponse | undefined;
@@ -23,9 +23,7 @@ export default function EmotionPlotGraph({ data, visibleEmotions, isLoading }: E
   
   if (isLoading || data === undefined || !data) {
     return (
-      <div className="w-full max-w-6xl h-96 p-4 rounded-lg bg-background border-2 flex items-center justify-center">
-         <p className="font-bold">Loading...</p> 
-      </div> 
+      <Skeleton className="w-full max-w-6xl h-96 rounded-lg bg-card" />
     );
   }
 

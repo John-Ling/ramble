@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import SettingsMenu from "../settings-menu/settings_menu";
 import EntriesPage from "./entries-page/entries_menu";
-import VoiceRecorder from "./recorder/voice_recorder";
+// import VoiceRecorder from "./recorder/voice_recorder";
 import { db_date_to_date, date_to_db_date, double_encode } from "@/lib/utils";
 
 import { signOut, useSession } from "next-auth/react";
@@ -11,6 +11,7 @@ import { useUser } from "@/hooks/useUser";
 
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton"
 
 import ProtectedRoute from "../providers/protected_route";
 import { useRouter } from "next/navigation";
@@ -180,22 +181,50 @@ export default function JournalPage() {
         {/* journal form */}
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between">
-            <h1 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h1>
+
+            <div className="w-[30ch] overflow-hidden">
+              <h2 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h2>
+            </div>
+        
             <div className="flex items-center">
-              <div className="flex items-center gap-x-3">
+              {/* <div className="flex items-center gap-x-3">
                 <VoiceRecorder />
                 <p className="text-sm w-[20ch]">Record</p>
-              </div>
-              <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+              </div> */}
+              <Button disabled={!pendingSave || fetched.isLoading || readOnly}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
             </div>
           </div>
           
-          <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
+          {
+            fetched.isLoading ?  <div className="bg-card mt-2 h-[85vh] rounded-lg p-3 space-y-2">
+              <Skeleton className="mb-2 h-4 w-[600px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[450px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[530px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[660px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[320px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[550px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[600px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[520px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[540px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[370px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[490px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[350px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[270px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[300px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[350px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[200px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[170px] bg-background" />
+              <Skeleton className="mb-2 h-4 w-[50px] bg-background" />
+            </div>
+             : 
+            <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 
                     disabled={fetched.isLoading || readOnly} 
-                    placeholder={`${fetched.isLoading ? "Loading..." : "What's on your mind?"}`}  
-                    className={`mt-2 h-[85vh] ${readOnly ? "text-[#a2a2a2]" : ""}`} 
+                    placeholder={`What's on your mind?`}  
+                    className={`mt-2 h-[85vh] rounded-lg ${readOnly ? "text-[#a2a2a2]" : ""}`} 
                     value={content}
                     ref={textareaRef}/>  
+          }
+          
         </div>    
       </div> 
     </ProtectedRoute>

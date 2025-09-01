@@ -16,10 +16,10 @@ NextAuth is used for handling authentication
 
 - Template support (i.e add a predefined or user defined text template for every new entry)
 - Interface for enabling encryption and setting own encryption key
-- Switching between colour themes via data-theme attribute (themes are already defined a react component and hook is all thats left to implement)
 - Multi-language support (i.e Mandarin)
 - Voice Input via VAPI 
 - Markdown support
-- Loading animations and better UI
+- Improve pagination for entries menu
+- Fix bug with theme switcher not retaining when logging out 
 
 - Fix UI with Upload Icon

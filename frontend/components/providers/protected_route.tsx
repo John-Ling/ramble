@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   check_auth_client();
 
   if (status === "loading") return <h1>Loading</h1>;
-  if (status === "unauthenticated") return <h1>HARAM</h1>;
+  if (status === "unauthenticated") return null;
   return (<>
     {children}
   </>);

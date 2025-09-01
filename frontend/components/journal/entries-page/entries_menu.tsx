@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
 import { User } from "next-auth";
 import { double_encode } from "@/lib/utils";
@@ -127,15 +128,28 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
 
   return (
     <>
-      <div className="bg-[#101010] w-4/5 lg:1/2 xl:w-1/3  h-[50vh]  lg:h-[35vh] z-40 flex flex-col overflow-scroll rounded-sm" ref={entryMenuRef}>
-        <div className="flex justify-between sticky top-0 bg-[#141414] border-b-1 p-4">
+      <div className="bg-background w-4/5 lg:1/2 xl:w-1/3  h-[50vh]  lg:h-[35vh] z-40 flex flex-col overflow-scroll rounded-sm" ref={entryMenuRef}>
+        <div className="flex justify-between sticky top-0 bg-card border-b-1 p-4">
           <h1 className="font-bold text-2xl">Entries</h1>
           <Button variant="ghost" size="icon" className="size-8" onClick={on_close}><X /></Button>
-        </div>
-        { fetched.isLoading ? <p>Loading...</p> : 
+        </div>        
         <div className="flex justify-center items-center">
           <div className="grid grid-cols-2  md:grid-cols-4 lg:gap-16 mt-10 p-2">
-            {entries?.map((entry: JournalEntryReference, i: number) => {
+            {
+              fetched.isLoading ? 
+              <>
+                {/* loading state */}
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+                <Skeleton className="h-[90px] w-[90px] rounded-lg bg-card"/>
+              </>
+              :
+              entries?.map((entry: JournalEntryReference, i: number) => {
               return (
                 <div key={i} onClick={selectEntry} onMouseOver={() => setActiveIndex(i)}  
                   className={`hover:cursor-pointer flex flex-col items-center p-4 rounded-md ${ i === activeIndex ? "bg-chart-2 text-black" : ""}`}
@@ -146,9 +160,10 @@ export default function EntriesPage({user, dbDate, fetchCount, set_fetch_count, 
                   </p>
                 </div>
               )
-            })}
+            })
+            }
           </div>
-        </div>}
+        </div>
       </div>
       <div className="absolute w-full h-full bg-black/50 z-30" onMouseDown={on_close}></div>
     </>

@@ -41,14 +41,15 @@ export default function FileUpload({ uid }: FileUploadProps) {
       return;
     }
 
-    const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
-      method: "POST",
-      body: formData,
-    });
+    await new Promise(r => setTimeout(r, 2000));
+    // const response = await fetch(`http://localhost:3000/api/entries/${uid}/upload/`, {
+    //   method: "POST",
+    //   body: formData,
+    // });
 
-    if (response.ok) {
-      console.log("Successfully uploaded files");
-    }
+    // if (response.ok) {
+    //   console.log("Successfully uploaded files");
+    // }
     return;
   }
 
