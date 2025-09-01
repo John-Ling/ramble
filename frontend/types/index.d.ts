@@ -62,11 +62,13 @@ interface VisibleEmotion extends GraphEmotion {
   visible: boolean;
 }
 
-
+// type represent the response from the backend
 interface EmotionDataAPIResponse {
     datapoints: EmotionDataAPIDataPoint[];
 }
 
+// data point with additional data such as authorID and _id
+// maybe store this later so user can click on points to view the entry 
 interface EmotionDataAPIDataPoint extends DataPoint {
     _id: string;
     authorID: string;

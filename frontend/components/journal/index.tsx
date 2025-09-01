@@ -181,8 +181,13 @@ export default function JournalPage() {
         <div className="w-full lg:w-3/5">
           <div className="flex justify-between">
             <h1 className="font-bold">{fetched.isLoading ? "Loading..." : entryName}</h1>
-            <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
-            {/* <VoiceRecorder /> */}
+            <div className="flex items-center">
+              <div className="flex items-center gap-x-3">
+                <VoiceRecorder />
+                <p className="text-sm w-[20ch]">Record</p>
+              </div>
+              <Button disabled={!pendingSave}  aria-disabled={!pendingSave} onClick={save_with_delay}>Save</Button>
+            </div>
           </div>
           
           <Textarea onChange={(e) => {setContent(e.target.value)}} autoCorrect="false" 

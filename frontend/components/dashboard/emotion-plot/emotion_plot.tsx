@@ -142,8 +142,6 @@ export default function EmotionPlot() {
     }
   }, [fetched.data])
 
-
-
   let label = "entries";
 
   switch(filterBy){
@@ -161,16 +159,15 @@ export default function EmotionPlot() {
       break;
   }
 
-
   return (
     <>
       <h2 className="text-2xl font-bold mb-4">Emotion data for the past {filterCount} {label}</h2>
-      <div className="flex gap-2 mb-4">
+      <div className="flex mb-4 gap-2">
         {/* filter Dropdown */}
         <Input className="w-[15ch] bg-card" type="text" onChange={on_input_change} value={filterCount}  placeholder="Filter Count"/>
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="secondary" className="text-foreground"  > <FilterIcon/> {filterBy}</Button>
+          <DropdownMenuTrigger className="text-foreground bg-secondary pl-2 pr-2 rounded-lg flex items-center gap-1">
+            <FilterIcon className="p-1"/> <span className="text-sm">by {filterBy}</span> 
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Filter By</DropdownMenuLabel>
@@ -187,10 +184,8 @@ export default function EmotionPlot() {
 
         {/* emotion visibility panel */}
         <Popover>
-          <PopoverTrigger>
-            <Button variant="secondary" size="sm" className="gap-2 text-foreground">
-              Emotions Displayed ({visibleCount}/{totalCount})
-            </Button>
+          <PopoverTrigger className="bg-secondary rounded-lg text-sm pl-2 pr-2" >
+            Emotions Displayed ({visibleCount}/{totalCount})
           </PopoverTrigger>
           <PopoverContent className="w-80" align="end">
             <div className="grid gap-4">

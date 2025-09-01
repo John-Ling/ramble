@@ -1,3 +1,4 @@
+"use client";
 import {
   LineChart,
   Line,
@@ -8,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+import { useEffect } from "react";
 
 interface EmotionPlotGraphProps {
   data?: EmotionDataAPIResponse | undefined;
@@ -18,6 +20,7 @@ interface EmotionPlotGraphProps {
 export default function EmotionPlotGraph({ data, visibleEmotions, isLoading }: EmotionPlotGraphProps) {
   console.log("ADDED DATA");
   console.log(data);
+  
   if (isLoading || data === undefined || !data) {
     return (
       <div className="w-full max-w-6xl h-96 p-4 rounded-lg bg-background border-2 flex items-center justify-center">
@@ -30,9 +33,10 @@ export default function EmotionPlotGraph({ data, visibleEmotions, isLoading }: E
 
   const datapoints: DataPoint[] = [];
 
-  data.datapoints.forEach((datapoint: EmotionDataAPIDataPoint) => {
-    datapoints.push(create_data_point(datapoint));
-  });
+  // data points are ordered in reverse so we move backwards
+  for (let i = data.datapoints.length - 1; i >= 0; i--) {
+    datapoints.push(create_data_point(data.datapoints[i]));
+  }
 
   console.log(datapoints);
 
